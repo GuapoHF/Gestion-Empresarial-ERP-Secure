@@ -1,0 +1,11 @@
+Función: Almacena únicamente recursos estáticos necesarios para la presentación visual de la aplicación.
+
+Uso habitual:
+
+Imágenes, logotipos e ilustraciones.
+
+Tipografías y fuentes personalizadas.
+
+Estilos globales, hojas de diseño base y temas visuales.
+
+Íconos y archivos multimedia estáticos.

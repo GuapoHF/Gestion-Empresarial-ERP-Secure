@@ -1,0 +1,11 @@
+Función: Define los ajustes y parámetros de entorno necesarios para que el servidor pueda inicializarse y conectarse con servicios externos.
+
+Uso habitual:
+
+Parámetros de conexión a la base de datos.
+
+Lectura y mapeo de variables de entorno del sistema.
+
+Ajustes de seguridad, encriptación, CORS y puertos de red.
+
+Credenciales de servicios externos (servidores de correo, pasarelas de pago, almacenamiento en la nube).

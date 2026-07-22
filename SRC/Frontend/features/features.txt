@@ -1,0 +1,7 @@
+Función: Es el núcleo de la interfaz de usuario. Agrupa las pantallas, vistas y flujos organizados por área funcional.
+
+Uso habitual:
+
+Se divide en subcarpetas equivalentes a las áreas de negocio del sistema (ej. Inventario, Ventas, Nómina, Contabilidad).
+
+Cada área contiene sus vistas/páginas específicas, formularios complejos de ese módulo y componentes privados que solo pertenecen a ese flujo.

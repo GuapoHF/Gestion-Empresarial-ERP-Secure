@@ -1,0 +1,9 @@
+Función: Centraliza la configuración técnica del cliente web y la conexión con el backend.
+
+Uso habitual:
+
+Configuración del cliente HTTP/red (direcciones URL base del servidor, tiempos de espera, encabezados por defecto).
+
+Rutas base de navegación.
+
+Constantes globales de la interfaz gráfica.

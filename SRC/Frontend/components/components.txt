@@ -1,0 +1,9 @@
+Función: Agrupa componentes visuales genéricos y agnósticos al negocio, diseñados para reutilizarse en cualquier parte de la aplicación.
+
+Uso habitual:
+
+Botones, campos de texto, desplegables y controles de formulario.
+
+Tablas dinámicas con paginación genérica.
+
+Modales de confirmación, tarjetas (cards) y alertas/notificaciones visuales.

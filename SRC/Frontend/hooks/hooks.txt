@@ -1,0 +1,9 @@
+Función: Encapsula la lógica de estado, comportamiento reutilizable y manejo de eventos que debe mantenerse separada de la capa visual.
+
+Uso habitual:
+
+Gestión de formularios reutilizables y sus validaciones.
+
+Lógica para consultar, guardar en caché o sincronizar datos.
+
+Detección de eventos del navegador (cambios de tamaño de pantalla, atajos de teclado, estado de conexión).

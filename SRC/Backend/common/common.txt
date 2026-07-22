@@ -1,0 +1,11 @@
+Función: Almacena todos los recursos transversales y compartidos que no pertenecen a un único módulo de negocio.
+
+Uso habitual:
+
+Manejadores globales de errores y excepciones.
+
+Filtros de seguridad, verificación de permisos y tokens de acceso.
+
+Funciones auxiliares genéricas (formateadores de fechas, calculadoras financieras, generadores de reportes).
+
+Constantes globales, códigos de estado y enumeraciones compartidas.

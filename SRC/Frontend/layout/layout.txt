@@ -1,0 +1,9 @@
+Función: Define el armazón o estructura estática que envuelve las diferentes pantallas de la aplicación.
+
+Uso habitual:
+
+Menú de navegación lateral (Sidebar) o superior (Navbar).
+
+Barra de estado, encabezado de usuario y pie de página (Footer).
+
+Envoltorios de páginas principales para mantener consistencia visual en todo el sistema.
