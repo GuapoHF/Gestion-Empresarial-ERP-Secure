@@ -1,22 +1,22 @@
 const modules = {
   administrador: {
     title: "Administrador",
-    description: "Gestion de usuarios, roles y permisos del sistema.",
+    description: "Gestion de empleados, roles y catalogos textiles.",
     icon: "admin.svg",
   },
   compras: {
     title: "Compras",
-    description: "Ordenes de compra, proveedores y seguimiento.",
+    description: "Compras de telas, proveedores y seguimiento.",
     icon: "compras.svg",
   },
   ventas: {
     title: "Facturacion / Ventas",
-    description: "Emision de facturas, notas de credito y ventas.",
+    description: "Facturacion de telas, pedidos y ventas.",
     icon: "ventas.svg",
   },
   inventarios: {
     title: "Inventarios",
-    description: "Control de stock, almacenes y movimientos.",
+    description: "Control de rollos, metros, colores y movimientos.",
     icon: "inventarios.svg",
   },
   contabilidad: {
@@ -26,13 +26,28 @@ const modules = {
   },
   costos: {
     title: "Costos",
-    description: "Analisis de costos, margenes y rentabilidad.",
+    description: "Analisis de costos por tela, margen y rentabilidad.",
     icon: "costos.svg",
   },
   actividad: {
     title: "Actividad Reciente",
-    description: "Historial general de movimientos del sistema.",
+    description: "Historial general de movimientos del sistema textil.",
     icon: "dashboard.svg",
+  },
+  configuracion: {
+    title: "Configuracion General",
+    description: "Parametros operativos para sucursales, inventario y ventas de telas.",
+    icon: "admin.svg",
+  },
+  reportes: {
+    title: "Reportes Globales",
+    description: "Indicadores de ventas, compras, inventario y margen por tela.",
+    icon: "costos.svg",
+  },
+  ayuda: {
+    title: "Ayuda",
+    description: "Guia de uso para los flujos principales de Textiles GH.",
+    icon: "help.svg",
   },
 };
 

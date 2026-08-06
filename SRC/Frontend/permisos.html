@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gestion Empresarial | Roles y Privilegios</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./assets/css/styles.css" />
+  </head>
+  <body>
+    <main class="app-layout" data-node-id="52:1179">
+      <aside class="sidebar">
+        <a class="brand sidebar-brand" href="./dashboard.html">Textiles GH<span>.</span></a>
+        <nav class="side-nav" aria-label="Modulos">
+          <p>Modulos</p>
+          <a href="./dashboard.html"><img src="./assets/icons/dashboard.svg" alt="" />Dashboard</a>
+          <a class="active" href="./admin.html"><img src="./assets/icons/admin.svg" alt="" />Administrador</a>
+          <a href="./modulo.html?modulo=compras"><img src="./assets/icons/compras.svg" alt="" />Compras</a>
+          <a href="./modulo.html?modulo=ventas"><img src="./assets/icons/ventas.svg" alt="" />Facturacion / Ventas</a>
+          <a href="./inventario.html"><img src="./assets/icons/inventarios.svg" alt="" />Inventarios</a>
+          <a href="./modulo.html?modulo=contabilidad"><img src="./assets/icons/contabilidad.svg" alt="" />Contabilidad</a>
+          <a href="./modulo.html?modulo=costos"><img src="./assets/icons/costos.svg" alt="" />Costos</a>
+        </nav>
+        <div class="user-box">
+          <div class="avatar">GH</div>
+          <div>
+            <strong>gabrielh</strong>
+            <span>Administrador</span>
+          </div>
+          <a class="logout" href="./login.html" aria-label="Cerrar sesion"><img src="./assets/icons/logout.svg" alt="" /></a>
+        </div>
+      </aside>
+      <section class="workspace">
+        <header class="topbar">
+          <div class="breadcrumbs">
+            <a href="./dashboard.html">Inicio</a>
+            <img src="./assets/icons/crumb.svg" alt="" />
+            <a href="./admin.html">Administracion</a>
+            <img src="./assets/icons/crumb.svg" alt="" />
+            <strong>Roles y Privilegios</strong>
+          </div>
+          <div class="topbar-actions">
+            <span>Lunes, 3 de agosto 2026</span>
+            <a href="./modulo.html?modulo=ayuda"><img src="./assets/icons/help.svg" alt="" />Ayuda</a>
+          </div>
+        </header>
+        <section class="content-area">
+          <header class="page-title">
+            <h1>Roles y Privilegios</h1>
+            <p>Permisos por usuario y modulo para la operacion textil.</p>
+          </header>
+          <section class="permission-layout">
+            <aside class="employee-list">
+              <h2>Empleados</h2>
+              <button class="active" type="button"><strong>Gabriel Hernandez</strong><span>Administrador</span></button>
+              <button type="button"><strong>Mariana Lopez</strong><span>Inventarios</span></button>
+              <button type="button"><strong>Ana Ruiz</strong><span>Contabilidad</span></button>
+              <button type="button"><strong>Carlos Mejia</strong><span>Ventas</span></button>
+            </aside>
+            <section class="permission-matrix">
+              <div class="matrix-heading">
+                <div>
+                  <h2>Permisos de Gabriel Hernandez</h2>
+                  <p>Activa o desactiva acceso a modulos clave.</p>
+                </div>
+                <button class="submit-button save-record" type="button">Guardar</button>
+              </div>
+              <div class="matrix-row head"><span>Modulo</span><span>Ver</span><span>Crear</span><span>Editar</span><span>Eliminar</span></div>
+              <div class="matrix-row"><strong>Inventario de Telas</strong><span class="toggle on"></span><span class="toggle on"></span><span class="toggle on"></span><span class="toggle off"></span></div>
+              <div class="matrix-row"><strong>Compras de Telas</strong><span class="toggle on"></span><span class="toggle on"></span><span class="toggle on"></span><span class="toggle off"></span></div>
+              <div class="matrix-row"><strong>Facturacion / Ventas</strong><span class="toggle on"></span><span class="toggle on"></span><span class="toggle on"></span><span class="toggle off"></span></div>
+              <div class="matrix-row"><strong>Catalogos Textiles</strong><span class="toggle on"></span><span class="toggle on"></span><span class="toggle on"></span><span class="toggle on"></span></div>
+              <div class="matrix-row"><strong>Bitacora</strong><span class="toggle on"></span><span class="toggle off"></span><span class="toggle off"></span><span class="toggle off"></span></div>
+            </section>
+          </section>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>

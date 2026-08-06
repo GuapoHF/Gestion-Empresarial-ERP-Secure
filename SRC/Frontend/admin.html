@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gestion Empresarial | Administracion</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./assets/css/styles.css" />
+  </head>
+  <body>
+    <main class="app-layout" data-node-id="51:869">
+      <aside class="sidebar">
+        <a class="brand sidebar-brand" href="./dashboard.html">Textiles GH<span>.</span></a>
+        <nav class="side-nav" aria-label="Modulos">
+          <p>Modulos</p>
+          <a href="./dashboard.html"><img src="./assets/icons/dashboard.svg" alt="" />Dashboard</a>
+          <a class="active" href="./admin.html"><img src="./assets/icons/admin.svg" alt="" />Administrador</a>
+          <a href="./modulo.html?modulo=compras"><img src="./assets/icons/compras.svg" alt="" />Compras</a>
+          <a href="./modulo.html?modulo=ventas"><img src="./assets/icons/ventas.svg" alt="" />Facturacion / Ventas</a>
+          <a href="./inventario.html"><img src="./assets/icons/inventarios.svg" alt="" />Inventarios</a>
+          <a href="./modulo.html?modulo=contabilidad"><img src="./assets/icons/contabilidad.svg" alt="" />Contabilidad</a>
+          <a href="./modulo.html?modulo=costos"><img src="./assets/icons/costos.svg" alt="" />Costos</a>
+        </nav>
+        <div class="user-box">
+          <div class="avatar">GH</div>
+          <div>
+            <strong>gabrielh</strong>
+            <span>Administrador</span>
+          </div>
+          <a class="logout" href="./login.html" aria-label="Cerrar sesion"><img src="./assets/icons/logout.svg" alt="" /></a>
+        </div>
+      </aside>
+
+      <section class="workspace">
+        <header class="topbar">
+          <div class="breadcrumbs">
+            <a href="./dashboard.html">Inicio</a>
+            <img src="./assets/icons/crumb.svg" alt="" />
+            <strong>Panel de Administracion</strong>
+          </div>
+          <div class="topbar-actions">
+            <span>Lunes, 3 de agosto 2026</span>
+            <a href="./modulo.html?modulo=ayuda"><img src="./assets/icons/help.svg" alt="" />Ayuda</a>
+          </div>
+        </header>
+
+        <section class="content-area">
+          <header class="page-title admin-title">
+            <div>
+              <h1>Panel de Administracion</h1>
+              <p>Control central para empleados, roles, catalogos textiles y auditoria.</p>
+            </div>
+          </header>
+
+          <section class="metric-strip" aria-label="Resumen administrativo">
+            <div><span>Empleados activos</span><strong>24</strong></div>
+            <div><span>Roles configurados</span><strong>6</strong></div>
+            <div><span>Catalogos textiles</span><strong>18</strong></div>
+            <div><span>Eventos hoy</span><strong>47</strong></div>
+          </section>
+
+          <section class="admin-grid" aria-label="Opciones de administracion">
+            <a class="admin-card" href="./empleados.html"><img src="./assets/icons/admin.svg" alt="" /><strong>Gestion de Empleados</strong><span>Alta, edicion y expediente laboral del personal.</span><small>Ver empleados</small></a>
+            <a class="admin-card" href="./permisos.html"><img src="./assets/icons/help.svg" alt="" /><strong>Roles y Privilegios</strong><span>Permisos por modulo para ventas, compras e inventarios.</span><small>Actualizar accesos</small></a>
+            <a class="admin-card" href="./catalogos.html"><img src="./assets/icons/inventarios.svg" alt="" /><strong>Catalogos Maestros de Telas</strong><span>Categorias, unidades, colores y sucursales.</span><small>Administrar catalogos</small></a>
+            <a class="admin-card" href="./modulo.html?modulo=configuracion"><img src="./assets/icons/info.svg" alt="" /><strong>Configuracion General</strong><span>Parametros operativos del sistema textil.</span><small>Ver configuracion</small></a>
+            <a class="admin-card" href="./bitacora.html"><img src="./assets/icons/dashboard.svg" alt="" /><strong>Bitacora del Sistema</strong><span>Registro de actividad y auditoria de cambios.</span><small>Ver actividad</small></a>
+            <a class="admin-card" href="./modulo.html?modulo=reportes"><img src="./assets/icons/costos.svg" alt="" /><strong>Reportes Globales</strong><span>Indicadores de inventario, ventas y margen por tela.</span><small>Consultar reportes</small></a>
+          </section>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>

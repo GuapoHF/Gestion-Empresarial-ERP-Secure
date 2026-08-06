@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gestion Empresarial | Gestion de Empleados</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./assets/css/styles.css" />
+  </head>
+  <body>
+    <main class="app-layout">
+      <aside class="sidebar">
+        <a class="brand sidebar-brand" href="./dashboard.html">Textiles GH<span>.</span></a>
+        <nav class="side-nav" aria-label="Modulos">
+          <p>Modulos</p>
+          <a href="./dashboard.html"><img src="./assets/icons/dashboard.svg" alt="" />Dashboard</a>
+          <a class="active" href="./admin.html"><img src="./assets/icons/admin.svg" alt="" />Administrador</a>
+          <a href="./modulo.html?modulo=compras"><img src="./assets/icons/compras.svg" alt="" />Compras</a>
+          <a href="./modulo.html?modulo=ventas"><img src="./assets/icons/ventas.svg" alt="" />Facturacion / Ventas</a>
+          <a href="./inventario.html"><img src="./assets/icons/inventarios.svg" alt="" />Inventarios</a>
+          <a href="./modulo.html?modulo=contabilidad"><img src="./assets/icons/contabilidad.svg" alt="" />Contabilidad</a>
+          <a href="./modulo.html?modulo=costos"><img src="./assets/icons/costos.svg" alt="" />Costos</a>
+        </nav>
+        <div class="user-box">
+          <div class="avatar">GH</div>
+          <div>
+            <strong>gabrielh</strong>
+            <span>Administrador</span>
+          </div>
+          <a class="logout" href="./login.html" aria-label="Cerrar sesion"><img src="./assets/icons/logout.svg" alt="" /></a>
+        </div>
+      </aside>
+
+      <section class="workspace">
+        <header class="topbar">
+          <div class="breadcrumbs">
+            <a href="./dashboard.html">Inicio</a>
+            <img src="./assets/icons/crumb.svg" alt="" />
+            <a href="./admin.html">Administracion</a>
+            <img src="./assets/icons/crumb.svg" alt="" />
+            <strong>Gestion de Empleados</strong>
+          </div>
+          <div class="topbar-actions">
+            <span>Lunes, 3 de agosto 2026</span>
+            <a href="./modulo.html?modulo=ayuda"><img src="./assets/icons/help.svg" alt="" />Ayuda</a>
+          </div>
+        </header>
+
+        <section class="content-area">
+          <header class="page-title admin-title">
+            <div>
+              <h1>Gestion de Empleados</h1>
+              <p>Administra el personal, puestos y accesos dentro de Textiles GH.</p>
+            </div>
+            <a class="primary-action" href="./empleado.html">+ Nuevo Empleado</a>
+          </header>
+
+          <section class="employee-summary" aria-label="Resumen de empleados">
+            <div><span>Total empleados</span><strong>24</strong></div>
+            <div><span>Inventarios</span><strong>8</strong></div>
+            <div><span>Ventas</span><strong>9</strong></div>
+            <div><span>Administracion</span><strong>7</strong></div>
+          </section>
+
+          <section class="employee-panel">
+            <div class="employee-toolbar">
+              <label class="search-control" for="employee-search">
+                <img src="./assets/icons/inventory-search.svg" alt="" />
+                <input id="employee-search" type="search" placeholder="Buscar por nombre, puesto o rol..." />
+              </label>
+              <button class="filter-button" type="button"><img src="./assets/icons/inventory-filter.svg" alt="" />Filtrar</button>
+            </div>
+            <div class="employee-table">
+              <div class="employee-row head"><span>Empleado</span><span>Puesto</span><span>Sucursal</span><span>Rol</span><span>Acciones</span></div>
+              <div class="employee-row">
+                <div class="employee-name"><b>ML</b><strong>Mariana Lopez Rivera</strong><span>mlopez</span></div>
+                <span>Encargada de Inventario Textil</span><span>Bodega Central</span><b class="status complete">Inventarios</b>
+                <span class="row-actions"><a href="./empleado.html"><img src="./assets/icons/inventory-edit.svg" alt="Editar" /></a></span>
+              </div>
+              <div class="employee-row">
+                <div class="employee-name"><b>CM</b><strong>Carlos Mejia</strong><span>cmejia</span></div>
+                <span>Asesor de Ventas de Telas</span><span>Sucursal San Pedro</span><b class="status complete">Ventas</b>
+                <span class="row-actions"><a href="./empleado.html"><img src="./assets/icons/inventory-edit.svg" alt="Editar" /></a></span>
+              </div>
+              <div class="employee-row">
+                <div class="employee-name"><b>AR</b><strong>Ana Ruiz</strong><span>aruiz</span></div>
+                <span>Contadora General</span><span>Oficina Central</span><b class="status processing">Contabilidad</b>
+                <span class="row-actions"><a href="./empleado.html"><img src="./assets/icons/inventory-edit.svg" alt="Editar" /></a></span>
+              </div>
+              <div class="employee-row">
+                <div class="employee-name"><b>GH</b><strong>Gabriel Hernandez</strong><span>gabrielh</span></div>
+                <span>Administrador del Sistema</span><span>Oficina Central</span><b class="status complete">Administrador</b>
+                <span class="row-actions"><a href="./empleado.html"><img src="./assets/icons/inventory-edit.svg" alt="Editar" /></a></span>
+              </div>
+            </div>
+          </section>
+        </section>
+      </section>
+    </main>
+    <script src="./assets/js/empleados.js"></script>
+  </body>
+</html>

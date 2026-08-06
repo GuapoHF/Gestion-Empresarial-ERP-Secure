@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gestion Empresarial | Inventario</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./assets/css/styles.css" />
+  </head>
+  <body>
+    <main class="app-layout inventory-screen" data-node-id="45:199">
+      <aside class="sidebar">
+        <a class="brand sidebar-brand" href="./dashboard.html">Textiles GH<span>.</span></a>
+        <nav class="side-nav" aria-label="Modulos">
+          <p>Modulos</p>
+          <a href="./dashboard.html"><img src="./assets/icons/inventory-nav-dashboard.svg" alt="" />Dashboard</a>
+          <a href="./admin.html"><img src="./assets/icons/inventory-nav-admin.svg" alt="" />Administrador</a>
+          <a href="./modulo.html?modulo=compras"><img src="./assets/icons/inventory-nav-compras.svg" alt="" />Compras</a>
+          <a href="./modulo.html?modulo=ventas"><img src="./assets/icons/inventory-nav-ventas.svg" alt="" />Facturacion / Ventas</a>
+          <a class="active" href="./inventario.html"><img src="./assets/icons/inventory-nav-inventarios.svg" alt="" />Inventarios</a>
+          <a href="./modulo.html?modulo=contabilidad"><img src="./assets/icons/inventory-nav-contabilidad.svg" alt="" />Contabilidad</a>
+          <a href="./modulo.html?modulo=costos"><img src="./assets/icons/inventory-nav-costos.svg" alt="" />Costos</a>
+        </nav>
+        <div class="user-box">
+          <div class="avatar">GH</div>
+          <div>
+            <strong>gabrielh</strong>
+            <span>Administrador</span>
+          </div>
+          <a class="logout" href="./login.html" aria-label="Cerrar sesion"><img src="./assets/icons/logout.svg" alt="" /></a>
+        </div>
+      </aside>
+
+      <section class="workspace">
+        <header class="topbar">
+          <div class="breadcrumbs">
+            <a href="./dashboard.html">Inicio</a>
+            <img src="./assets/icons/crumb.svg" alt="" />
+            <a href="./inventario.html">Almacen</a>
+            <img src="./assets/icons/crumb.svg" alt="" />
+            <strong>Inventario</strong>
+          </div>
+          <div class="topbar-actions">
+            <span>Lunes, 3 de agosto 2026</span>
+            <a href="./modulo.html?modulo=ayuda"><img src="./assets/icons/help.svg" alt="" />Ayuda</a>
+          </div>
+        </header>
+
+        <section class="content-area">
+          <header class="page-title">
+            <h1>Inventario General</h1>
+            <p>Almacen de Telas - 3 registros</p>
+          </header>
+
+          <div class="inventory-toolbar">
+            <label class="search-control" for="inventory-search">
+              <img src="./assets/icons/inventory-search.svg" alt="" />
+              <input id="inventory-search" type="search" placeholder="Buscar por ID, color o tipo de tela..." />
+            </label>
+            <button class="filter-button" type="button">
+              <img src="./assets/icons/inventory-filter.svg" alt="" />
+              Filtrar
+              <img src="./assets/icons/form-chevron.svg" alt="" />
+            </button>
+            <a class="primary-action" href="./registrar-ingreso.html">+ Registrar Tela</a>
+          </div>
+
+          <section class="inventory-table" aria-label="Inventario general">
+            <div class="inventory-head">
+              <span>ID Tela</span><span>Descripcion</span><span>Cantidad</span><span>Unidad</span><span>Costo Total</span><span>Precio Total</span><span>Utilidad</span><span>Margen</span><span>Acciones</span>
+            </div>
+            <div class="inventory-row">
+              <a href="./registrar-ingreso.html?id=TELA-00142">TELA-00142</a><span>Manta cruda 1.50 m</span><span>500</span><span>Metros</span><span>L 12,750.00</span><span>L 18,500.00</span><strong>L 5,750.00</strong><b class="margin good">31.08%</b><span class="row-actions"><a href="./registrar-ingreso.html?id=TELA-00142"><img src="./assets/icons/inventory-edit.svg" alt="Editar" /></a><button type="button"><img src="./assets/icons/inventory-delete.svg" alt="Eliminar" /></button></span>
+            </div>
+            <div class="inventory-row">
+              <a href="./registrar-ingreso.html?id=TELA-00098">TELA-00098</a><span>Lino premium azul marino</span><span>240</span><span>Metros</span><span>L 9,360.00</span><span>L 13,200.00</span><strong>L 3,840.00</strong><b class="margin warning">29.09%</b><span class="row-actions"><a href="./registrar-ingreso.html?id=TELA-00098"><img src="./assets/icons/inventory-edit.svg" alt="Editar" /></a><button type="button"><img src="./assets/icons/inventory-delete.svg" alt="Eliminar" /></button></span>
+            </div>
+            <div class="inventory-row">
+              <a href="./registrar-ingreso.html?id=TELA-00215">TELA-00215</a><span>Popelina estampada floral</span><span>180</span><span>Metros</span><span>L 4,140.00</span><span>L 5,580.00</span><strong>L 1,440.00</strong><b class="margin warning">25.81%</b><span class="row-actions"><a href="./registrar-ingreso.html?id=TELA-00215"><img src="./assets/icons/inventory-edit.svg" alt="Editar" /></a><button type="button"><img src="./assets/icons/inventory-delete.svg" alt="Eliminar" /></button></span>
+            </div>
+          </section>
+
+          <div class="pagination-bar">
+            <p>Mostrando 3 de 11 registros</p>
+            <div class="pagination">
+              <button type="button"><img src="./assets/icons/page-prev.svg" alt="Pagina anterior" /></button>
+              <button class="active" type="button">1</button>
+              <button type="button">2</button>
+              <button type="button">3</button>
+              <button type="button">4</button>
+              <button type="button"><img src="./assets/icons/page-next.svg" alt="Pagina siguiente" /></button>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>
