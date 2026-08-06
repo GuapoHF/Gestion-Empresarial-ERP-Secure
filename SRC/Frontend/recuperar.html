@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gestion Empresarial | Recuperar Contrasena</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./assets/css/styles.css" />
+  </head>
+  <body>
+    <main class="auth-page" data-node-id="1:610">
+      <section class="signup-shell auth-compact" aria-labelledby="recover-title">
+        <a class="brand" href="./login.html" aria-label="Gestion Empresarial">acme<span>.</span></a>
+
+        <div class="status-message" id="recover-status" hidden>
+          <img src="./assets/icons/success.svg" alt="" />
+          <p>Se ha enviado un enlace a tu correo. <span>Revisa tu bandeja de entrada.</span></p>
+        </div>
+
+        <header class="signup-header recover-header">
+          <h1 id="recover-title">Recuperar Contrasena</h1>
+          <p>Ingresa tu correo electronico y te enviaremos las instrucciones para restablecer tu contrasena.</p>
+        </header>
+
+        <form class="signup-form" id="recover-form">
+          <div class="field icon-field">
+            <label for="email">Correo electronico</label>
+            <div class="input-icon-control">
+              <img src="./assets/icons/mail.svg" alt="" />
+              <input id="email" name="email" type="email" value="gabriel.hernandez@empresa.com" autocomplete="email" required />
+            </div>
+          </div>
+
+          <button class="submit-button" type="submit">Enviar enlace de recuperacion</button>
+        </form>
+
+        <footer class="signin-footer">
+          <a class="back-login" href="./login.html">
+            <img src="./assets/icons/back.svg" alt="" />
+            Volver a Iniciar Sesion
+          </a>
+        </footer>
+      </section>
+    </main>
+
+    <script src="./assets/js/auth.js"></script>
+  </body>
+</html>

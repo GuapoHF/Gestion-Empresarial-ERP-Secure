@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gestion Empresarial | Login</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./assets/css/styles.css" />
+  </head>
+  <body>
+    <main class="auth-page" data-node-id="1:545">
+      <section class="signup-shell auth-compact" aria-labelledby="login-title">
+        <a class="brand" href="./login.html" aria-label="Gestion Empresarial">acme<span>.</span></a>
+
+        <header class="signup-header">
+          <h1 id="login-title">Bienvenido al Sistema</h1>
+          <p>Ingresa tus credenciales para continuar.</p>
+        </header>
+
+        <form class="signup-form" id="login-form">
+          <div class="field">
+            <label for="username">Usuario</label>
+            <input id="username" name="username" type="text" placeholder="ej. gabrielh" autocomplete="username" required />
+          </div>
+
+          <div class="field login-password">
+            <label for="password">Contrasena</label>
+            <div class="password-control">
+              <input id="password" name="password" type="password" value="12345678" autocomplete="current-password" required />
+              <button class="icon-button" type="button" id="toggle-password" aria-label="Mostrar contrasena">
+                <img src="./assets/icons/login-eye.svg" alt="" />
+              </button>
+            </div>
+            <p class="field-alert" id="login-alert" hidden>
+              <img src="./assets/icons/login-alert.svg" alt="" />
+              Contrasena incorrecta. Verifica e intenta de nuevo.
+            </p>
+            <a class="forgot-link" href="./recuperar.html">Olvide mi contrasena</a>
+          </div>
+
+          <button class="submit-button" type="submit">Iniciar Sesion</button>
+        </form>
+
+        <footer class="signin-footer">
+          <p>No tienes cuenta? <a href="./index.html">Registrate aqui</a></p>
+        </footer>
+      </section>
+    </main>
+
+    <script src="./assets/js/auth.js"></script>
+  </body>
+</html>

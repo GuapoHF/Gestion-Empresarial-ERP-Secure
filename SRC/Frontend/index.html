@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gestion Empresarial | Registro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./assets/css/styles.css" />
+  </head>
+  <body>
+    <main class="auth-page" data-node-id="1:430">
+      <section class="signup-shell" aria-labelledby="signup-title">
+        <a class="brand" href="#" aria-label="Gestion Empresarial">acme<span>.</span></a>
+
+        <header class="signup-header">
+          <h1 id="signup-title">Crea tu cuenta</h1>
+          <p>Completa el formulario para registrarte en el sistema.</p>
+        </header>
+
+        <form class="signup-form" id="signup-form" data-redirect="./login.html">
+          <div class="field">
+            <label for="firstName">Nombre</label>
+            <input id="firstName" name="firstName" type="text" value="Gabriel" autocomplete="given-name" required />
+          </div>
+
+          <div class="form-grid">
+            <div class="field">
+              <label for="lastName">Apellido Paterno</label>
+              <input id="lastName" name="lastName" type="text" value="Hernandez" autocomplete="family-name" required />
+            </div>
+
+            <div class="field">
+              <label for="secondLastName">Apellido Materno</label>
+              <input id="secondLastName" name="secondLastName" type="text" value="Morales" autocomplete="additional-name" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="email">Correo electronico</label>
+            <input id="email" name="email" type="email" value="gabriel.hernandez@empresa.com" autocomplete="email" required />
+          </div>
+
+          <div class="form-grid">
+            <div class="field">
+              <label for="password">Contrasena</label>
+              <div class="password-control">
+                <input id="password" name="password" type="password" value="12345678" autocomplete="new-password" required />
+                <button class="icon-button" type="button" id="toggle-password" aria-label="Mostrar contrasena">
+                  <img src="./assets/icons/eye.svg" alt="" />
+                </button>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="company">Empresa</label>
+              <div class="select-control">
+                <select id="company" name="company">
+                  <option>Empresa 1</option>
+                  <option>Empresa 2</option>
+                  <option>Empresa 3</option>
+                </select>
+                <img src="./assets/icons/chevron-down.svg" alt="" />
+              </div>
+            </div>
+          </div>
+
+          <div class="notice" role="note">
+            <img src="./assets/icons/info.svg" alt="" />
+            <p>Tu usuario de acceso sera generado automaticamente con tu nombre y la inicial de tu apellido paterno.</p>
+          </div>
+
+          <div class="field generated-user">
+            <label for="username">Tu Usuario</label>
+            <input id="username" name="username" type="text" value="gabrielh" readonly />
+            <small>Este sera tu identificador para iniciar sesion.</small>
+          </div>
+
+          <button class="submit-button" type="submit">Crear Cuenta</button>
+        </form>
+
+        <footer class="signin-footer">
+          <p>Ya tienes cuenta? <a href="./login.html">Iniciar Sesion</a></p>
+        </footer>
+      </section>
+    </main>
+
+    <script src="./assets/js/register.js"></script>
+  </body>
+</html>
