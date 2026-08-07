@@ -53,6 +53,11 @@ const modules = {
 
 const params = new URLSearchParams(window.location.search);
 const currentKey = params.get("modulo") || "administrador";
+
+if (currentKey === "configuracion") {
+  window.location.replace("./configuracion.html");
+}
+
 const currentModule = modules[currentKey] || modules.administrador;
 
 document.title = `Gestion Empresarial | ${currentModule.title}`;
