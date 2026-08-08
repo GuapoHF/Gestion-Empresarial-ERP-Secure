@@ -43,12 +43,12 @@ togglePasswordButton.addEventListener("click", () => {
   togglePasswordButton.setAttribute("aria-label", isHidden ? "Ocultar contrasena" : "Mostrar contrasena");
 });
 
-signupForm.addEventListener("submit", (event) => {
+signupForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   registerAlert.hidden = true;
 
   try {
-    window.gestionUserDb.createUser({
+    await window.gestionUserDb.createUser({
       firstName: firstNameInput.value,
       lastName: lastNameInput.value,
       secondLastName: secondLastNameInput.value,

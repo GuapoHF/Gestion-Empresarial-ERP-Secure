@@ -130,3 +130,14 @@ Importante
 1. Reutilización vs. Módulos: Si un elemento visual o función sirve en más de 2 áreas distintas, colócalo en components/, common/ o hooks/. Si es exclusivo de un proceso (ej. cálculo de nómina), debe vivir dentro de su respectivo módulo en features/ o modules/.
 
 2. Separación de Responsabilidades: Las carpetas dentro de Frontend/ jamás deben procesar reglas de negocio pesadas o cálculos financieros complejos; estas operaciones deben delegarse siempre al Backend/.
+
+## Ejecutar backend de autenticacion
+
+El login y el registro pueden conectarse al backend JavaScript incluido en `SRC/Backend/server.js`.
+Para probarlo localmente ejecuta:
+
+```bash
+node SRC/Backend/server.js
+```
+
+Luego abre `http://localhost:3000/login.html`. Las cuentas se guardan en `SRC/Backend/database/users.json`; si el archivo no existe, `SRC/Backend/config/db.js` lo crea con el usuario inicial `gabrielh` y solo permite iniciar sesion cuando el usuario y la contrasena coinciden con una cuenta guardada.

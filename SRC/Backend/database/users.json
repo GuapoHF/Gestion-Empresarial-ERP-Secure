@@ -1,0 +1,14 @@
+[
+  {
+    "id": 1,
+    "firstName": "Gabriel",
+    "lastName": "Hernandez",
+    "secondLastName": "Morales",
+    "email": "gabriel.hernandez@textilesgh.com",
+    "username": "gabrielh",
+    "password": "12345678",
+    "company": "Textiles GH",
+    "role": "Administrador",
+    "createdAt": "2026-08-03T00:00:00.000Z"
+  }
+]
