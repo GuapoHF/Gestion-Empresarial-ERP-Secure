@@ -1,5 +1,6 @@
 const GESTION_USERS_KEY = "gestionUsers";
 const GESTION_SESSION_KEY = "gestionSession";
+const API_BASE_URL = "http://localhost:3000/api/auth";
 
 const defaultUsers = [
   {
@@ -64,7 +65,22 @@ function publicUser(user) {
   return safeUser;
 }
 
-function createUser(userData) {
+async function requestAuth(endpoint, payload) {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "No se pudo completar la solicitud.");
+  }
+
+  return data.user;
+}
+
+function createLocalUser(userData) {
   const users = getStoredUsers();
   const username = normalizeLoginValue(userData.username);
   const email = normalizeLoginValue(userData.email);
@@ -92,15 +108,42 @@ function createUser(userData) {
   return publicUser(newUser);
 }
 
-function loginUser(username, password) {
+async function createUser(userData) {
+  try {
+    return await requestAuth("/register", userData);
+  } catch (error) {
+    if (error instanceof TypeError) {
+      return createLocalUser(userData);
+    }
+
+    throw error;
+  }
+}
+
+function loginLocalUser(username, password) {
   const login = normalizeLoginValue(username);
   const user = getStoredUsers().find((storedUser) => storedUser.username === login && storedUser.password === password);
 
-  if (!user) {
+  return user ? publicUser(user) : null;
+}
+
+async function loginUser(username, password) {
+  let sessionUser = null;
+
+  try {
+    sessionUser = await requestAuth("/login", { username, password });
+  } catch (error) {
+    if (!(error instanceof TypeError)) {
+      return null;
+    }
+
+    sessionUser = loginLocalUser(username, password);
+  }
+
+  if (!sessionUser) {
     return null;
   }
 
-  const sessionUser = publicUser(user);
   sessionStorage.setItem(GESTION_SESSION_KEY, JSON.stringify(sessionUser));
   sessionStorage.setItem("gestionUser", sessionUser.username);
   return sessionUser;

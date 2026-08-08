@@ -21,11 +21,11 @@ if (togglePasswordButton && passwordInput) {
 if (loginForm) {
   window.gestionUserDb.getStoredUsers();
 
-  loginForm.addEventListener("submit", (event) => {
+  loginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     loginAlert.hidden = true;
 
-    const loggedUser = window.gestionUserDb.loginUser(usernameInput.value, passwordInput.value);
+    const loggedUser = await window.gestionUserDb.loginUser(usernameInput.value, passwordInput.value);
 
     if (!loggedUser) {
       passwordInput.value = "";
