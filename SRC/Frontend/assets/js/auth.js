@@ -4,6 +4,7 @@ const loginForm = document.querySelector("#login-form");
 const recoverForm = document.querySelector("#recover-form");
 const recoverStatus = document.querySelector("#recover-status");
 const usernameInput = document.querySelector("#username");
+const loginAlert = document.querySelector("#login-alert");
 
 if (usernameInput && sessionStorage.getItem("gestionUser")) {
   usernameInput.value = sessionStorage.getItem("gestionUser");
@@ -18,8 +19,21 @@ if (togglePasswordButton && passwordInput) {
 }
 
 if (loginForm) {
+  window.gestionUserDb.getStoredUsers();
+
   loginForm.addEventListener("submit", (event) => {
     event.preventDefault();
+    loginAlert.hidden = true;
+
+    const loggedUser = window.gestionUserDb.loginUser(usernameInput.value, passwordInput.value);
+
+    if (!loggedUser) {
+      passwordInput.value = "";
+      passwordInput.focus();
+      loginAlert.hidden = false;
+      return;
+    }
+
     window.location.href = "./dashboard.html";
   });
 }
