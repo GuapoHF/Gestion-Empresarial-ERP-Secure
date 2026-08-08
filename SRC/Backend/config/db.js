@@ -1,53 +1,23 @@
-const fs = require("fs");
-const path = require("path");
-
-const databasePath = path.join(__dirname, "..", "database", "users.json");
-
-const defaultUsers = [
-  {
-    id: 1,
-    firstName: "Gabriel",
-    lastName: "Hernandez",
-    secondLastName: "Morales",
-    email: "gabriel.hernandez@textilesgh.com",
-    username: "gabrielh",
-    password: "12345678",
-    company: "Textiles GH",
-    role: "Administrador",
-    createdAt: "2026-08-03T00:00:00.000Z",
-  },
-];
-
-function ensureDatabase() {
-  const databaseDirectory = path.dirname(databasePath);
-
-  if (!fs.existsSync(databaseDirectory)) {
-    fs.mkdirSync(databaseDirectory, { recursive: true });
-  }
-
-  if (!fs.existsSync(databasePath)) {
-    fs.writeFileSync(databasePath, JSON.stringify(defaultUsers, null, 2));
-  }
-}
+const pool = require("./connection");
 
 function normalizeLoginValue(value = "") {
   return value.trim().toLowerCase();
 }
 
-function readUsers() {
-  ensureDatabase();
-  const content = fs.readFileSync(databasePath, "utf8");
-  return JSON.parse(content || "[]");
-}
-
-function writeUsers(users) {
-  ensureDatabase();
-  fs.writeFileSync(databasePath, JSON.stringify(users, null, 2));
-}
-
 function publicUser(user) {
-  const { password, ...safeUser } = user;
-  return safeUser;
+  if (!user) return null;
+
+  return {
+    id: user.id,
+    firstName: user.first_name,
+    lastName: user.last_name,
+    secondLastName: user.second_last_name || "",
+    email: user.email,
+    username: user.username,
+    company: user.company,
+    role: user.role,
+    createdAt: user.created_at,
+  };
 }
 
 function validateRequiredFields(userData) {
@@ -59,50 +29,61 @@ function validateRequiredFields(userData) {
   }
 }
 
-function createUser(userData) {
+async function createUser(userData) {
   validateRequiredFields(userData);
 
-  const users = readUsers();
   const username = normalizeLoginValue(userData.username);
   const email = normalizeLoginValue(userData.email);
-  const duplicateUser = users.find((user) => user.username === username || user.email === email);
 
-  if (duplicateUser) {
+  // Verificar si ya existe usuario o correo
+  const [existingUsers] = await pool.query(
+    "SELECT id FROM users WHERE username = ? OR email = ?",
+    [username, email]
+  );
+
+  if (existingUsers.length > 0) {
     throw new Error("Ya existe una cuenta registrada con ese usuario o correo.");
   }
 
-  const newUser = {
-    id: Date.now(),
-    firstName: userData.firstName.trim(),
-    lastName: userData.lastName.trim(),
-    secondLastName: String(userData.secondLastName || "").trim(),
-    email,
-    username,
-    password: userData.password,
-    company: userData.company,
-    role: "Administrador",
-    createdAt: new Date().toISOString(),
-  };
+  // Insertar nuevo usuario
+  const [result] = await pool.query(
+    `INSERT INTO users (first_name, last_name, second_last_name, email, username, password, company, role)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'Administrador')`,
+    [
+      userData.firstName.trim(),
+      userData.lastName.trim(),
+      String(userData.secondLastName || "").trim(),
+      email,
+      username,
+      userData.password,
+      userData.company,
+    ]
+  );
 
-  users.push(newUser);
-  writeUsers(users);
-  return publicUser(newUser);
+  const [newUser] = await pool.query("SELECT * FROM users WHERE id = ?", [result.insertId]);
+  return publicUser(newUser[0]);
 }
 
-function loginUser(username, password) {
+async function loginUser(username, password) {
   const login = normalizeLoginValue(username);
-  const user = readUsers().find((storedUser) => storedUser.username === login && storedUser.password === password);
 
-  return user ? publicUser(user) : null;
+  const [rows] = await pool.query(
+    `SELECT id, first_name, last_name, second_last_name, email, username, company, role, created_at
+     FROM users
+     WHERE username = ? AND password = ?`,
+    [login, password]
+  );
+
+  return rows.length > 0 ? publicUser(rows[0]) : null;
 }
 
-function getUsers() {
-  return readUsers().map(publicUser);
+async function getUsers() {
+  const [rows] = await pool.query("SELECT * FROM users");
+  return rows.map(publicUser);
 }
 
 module.exports = {
   createUser,
   getUsers,
   loginUser,
-  readUsers,
 };

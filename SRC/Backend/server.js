@@ -69,7 +69,7 @@ async function handleRequest(request, response) {
 
   if (request.url === "/api/auth/register" && request.method === "POST") {
     try {
-      const user = createUser(await parseJsonBody(request));
+      const user = await createUser(await parseJsonBody(request)); // <-- Agregar await
       sendJson(response, 201, { user });
     } catch (error) {
       sendJson(response, 400, { message: error.message });
@@ -80,7 +80,7 @@ async function handleRequest(request, response) {
   if (request.url === "/api/auth/login" && request.method === "POST") {
     try {
       const { username, password } = await parseJsonBody(request);
-      const user = loginUser(username, password);
+      const user = await loginUser(username, password); // <-- Agregar await
 
       if (!user) {
         sendJson(response, 401, { message: "Usuario o contrasena incorrectos." });
@@ -95,6 +95,7 @@ async function handleRequest(request, response) {
   }
 
   serveStaticFile(request, response);
+
 }
 
 http.createServer(handleRequest).listen(PORT, () => {
