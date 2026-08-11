@@ -97,7 +97,6 @@ async function handleRequest(request, response) {
   serveStaticFile(request, response);
 
 }
-
 http.createServer(handleRequest).listen(PORT, () => {
   console.log(`Servidor iniciado en http://localhost:${PORT}`);
 });

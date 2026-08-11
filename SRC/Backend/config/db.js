@@ -3,7 +3,6 @@ const pool = require("./connection");
 function normalizeLoginValue(value = "") {
   return value.trim().toLowerCase();
 }
-
 function publicUser(user) {
   if (!user) return null;
 
