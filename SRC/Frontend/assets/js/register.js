@@ -3,6 +3,7 @@ const lastNameInput = document.querySelector("#lastName");
 const secondLastNameInput = document.querySelector("#secondLastName");
 const emailInput = document.querySelector("#email");
 const companyInput = document.querySelector("#company");
+const roleInput = document.querySelector("#role");
 const usernameInput = document.querySelector("#username");
 const passwordInput = document.querySelector("#password");
 const togglePasswordButton = document.querySelector("#toggle-password");
@@ -55,6 +56,7 @@ signupForm.addEventListener("submit", async (event) => {
       email: emailInput.value,
       password: passwordInput.value,
       company: companyInput.value,
+      role: roleInput.value,
       username: usernameInput.value,
     });
 

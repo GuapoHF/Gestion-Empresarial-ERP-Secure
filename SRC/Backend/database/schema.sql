@@ -15,6 +15,10 @@ INSERT INTO users (first_name, last_name, second_last_name, email, username, pas
 VALUES ('Gabriel', 'Hernandez', 'Morales', 'gabriel.hernandez@textilesgh.com', 'gabrielh', '12345678', 'Textiles GH', 'Administrador')
 ON CONFLICT(username) DO NOTHING;
 
+INSERT INTO users (first_name, last_name, second_last_name, email, username, password, company, role)
+VALUES ('Mariana', 'Lopez', 'Santos', 'mariana.lopez@textilesgh.com', 'marianal', '12345678', 'Textiles GH', 'Empleado')
+ON CONFLICT(username) DO NOTHING;
+
 SELECT id, first_name, last_name, second_last_name, email, username, company, role
 FROM users
 WHERE username = ? AND password = ?;

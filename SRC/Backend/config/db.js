@@ -45,10 +45,12 @@ async function createUser(userData) {
     throw new Error("Ya existe una cuenta registrada con ese usuario o correo.");
   }
 
+  const role = userData.role === "Administrador" ? "Administrador" : "Empleado";
+
   // Insertar nuevo usuario
   const [result] = await pool.query(
     `INSERT INTO users (first_name, last_name, second_last_name, email, username, password, company, role)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 'Administrador')`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       userData.firstName.trim(),
       userData.lastName.trim(),
@@ -57,6 +59,7 @@ async function createUser(userData) {
       username,
       userData.password,
       userData.company,
+      role,
     ]
   );
 
