@@ -15,6 +15,18 @@ const defaultUsers = [
     role: "Administrador",
     createdAt: "2026-08-03T00:00:00.000Z",
   },
+  {
+    id: 2,
+    firstName: "Mariana",
+    lastName: "Lopez",
+    secondLastName: "Santos",
+    email: "mariana.lopez@textilesgh.com",
+    username: "marianal",
+    password: "12345678",
+    company: "Textiles GH",
+    role: "Empleado",
+    createdAt: "2026-08-03T00:00:00.000Z",
+  },
 ];
 
 const userSql = {
@@ -99,7 +111,7 @@ function createLocalUser(userData) {
     username,
     password: userData.password,
     company: userData.company,
-    role: "Administrador",
+    role: userData.role === "Administrador" ? "Administrador" : "Empleado",
     createdAt: new Date().toISOString(),
   };
 
