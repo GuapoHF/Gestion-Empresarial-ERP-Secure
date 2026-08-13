@@ -135,7 +135,6 @@ Importante
 
 El login y el registro pueden conectarse al backend JavaScript incluido en `SRC/Backend/server.js`.
 Para probarlo localmente ejecuta:
-
 ```bash
 node SRC/Backend/server.js
 ```
