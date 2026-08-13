@@ -39,8 +39,16 @@ if (loginForm) {
 }
 
 if (recoverForm) {
-  recoverForm.addEventListener("submit", (event) => {
+  recoverForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    recoverStatus.hidden = false;
+    const email = recoverForm.querySelector("#email").value;
+
+    try {
+      await window.gestionUserDb.recoverPassword(email);
+      recoverStatus.hidden = false;
+    } catch (error) {
+      recoverStatus.querySelector("p").textContent = error.message;
+      recoverStatus.hidden = false;
+    }
   });
 }

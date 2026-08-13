@@ -61,7 +61,9 @@ signupForm.addEventListener("submit", async (event) => {
     });
 
     sessionStorage.setItem("gestionUser", usernameInput.value);
-    window.location.href = signupForm.dataset.redirect || "./login.html";
+    showRegisterAlert("Solicitud enviada. Un administrador debe autorizar tu cuenta antes de iniciar sesion.");
+    signupForm.reset();
+    updateGeneratedUsername();
   } catch (error) {
     showRegisterAlert(error.message);
   }

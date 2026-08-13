@@ -61,6 +61,16 @@
             <div><span>Eventos hoy</span><strong>47</strong></div>
           </section>
 
+
+          <section class="approval-panel" aria-labelledby="approval-title">
+            <div>
+              <h2 id="approval-title">Autorizacion de cuentas</h2>
+              <p>Revisa las solicitudes de registro y aprueba solo las cuentas validadas por administracion.</p>
+            </div>
+            <p class="approval-status" id="approval-status" hidden></p>
+            <div class="approval-list" id="approval-list" aria-live="polite"></div>
+          </section>
+
           <section class="admin-grid" aria-label="Opciones de administracion">
             <a class="admin-card" href="./empleados.html"><img src="./assets/icons/admin.svg" alt="" /><strong>Gestion de Empleados</strong><span>Alta, edicion y expediente laboral del personal.</span><small>Ver empleados</small></a>
             <a class="admin-card" href="./permisos.html"><img src="./assets/icons/help.svg" alt="" /><strong>Roles y Privilegios</strong><span>Permisos por modulo para ventas, compras e inventarios.</span><small>Actualizar accesos</small></a>
@@ -74,5 +84,6 @@
     </main>
     <script src="./assets/js/user-db.js"></script>
     <script src="./assets/js/session.js"></script>
+    <script src="./assets/js/admin.js"></script>
   </body>
 </html>
