@@ -140,3 +140,21 @@ node SRC/Backend/server.js
 ```
 
 Luego abre `http://localhost:3000/login.html`. Las cuentas se guardan en `SRC/Backend/database/users.json`; si el archivo no existe, `SRC/Backend/config/db.js` lo crea con el usuario inicial `gabrielh` y solo permite iniciar sesion cuando el usuario y la contrasena coinciden con una cuenta guardada.
+
+## Configurar correo de recuperacion
+
+El flujo de recuperacion valida primero que el correo exista en la tabla `users`. Si existe, genera un token valido por 1 hora, invalida tokens anteriores y envia un enlace a `restablecer.html`.
+
+Antes de iniciar el backend configura SMTP para que el correo salga de inmediato:
+
+```bash
+export SMTP_HOST="smtp.tu-proveedor.com"
+export SMTP_PORT="587"
+export SMTP_USER="usuario@tu-dominio.com"
+export SMTP_PASS="tu-contrasena-o-app-password"
+export SMTP_FROM="usuario@tu-dominio.com"
+export SMTP_STARTTLS="true"
+node SRC/Backend/server.js
+```
+
+Si no configuras SMTP, el backend imprimira el enlace en consola para pruebas locales.

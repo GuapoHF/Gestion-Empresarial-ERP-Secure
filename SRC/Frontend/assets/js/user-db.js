@@ -196,12 +196,17 @@ async function recoverPassword(email) {
     const normalizedEmail = normalizeLoginValue(email);
     const user = getStoredUsers().find((storedUser) => storedUser.email === normalizedEmail);
 
-    if (user) {
-      console.info(`Enlace de recuperacion enviado a ${user.email}`);
+    if (!user) {
+      throw new Error("No existe una cuenta registrada con ese correo.");
     }
 
-    return { message: "Si el correo existe, se enviaron las instrucciones de recuperacion." };
+    console.info(`Correo registrado. Enlace de recuperacion enviado a ${user.email}`);
+    return { message: "Correo registrado. Enviamos el enlace de recuperacion.", emailRegistered: true };
   }
+}
+
+async function resetPassword(token, password) {
+  return await requestAuth("/reset", { token, password });
 }
 
 async function getPendingRegistrations() {
@@ -261,5 +266,6 @@ window.gestionUserDb = {
   loginUser,
   logoutUser,
   recoverPassword,
+  resetPassword,
   rejectRegistration,
 };

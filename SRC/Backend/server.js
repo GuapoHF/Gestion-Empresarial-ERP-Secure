@@ -7,6 +7,7 @@ const {
   loginUser,
   rejectRegistration,
   requestRegistration,
+  resetPassword,
   sendPasswordRecovery,
 } = require("./config/db");
 
@@ -87,7 +88,15 @@ async function handleRequest(request, response) {
       const { email } = await parseJsonBody(request);
       const origin = request.headers.origin || `http://localhost:${PORT}`;
       const result = await sendPasswordRecovery(email, origin);
-      sendJson(response, 200, { message: "Si el correo existe, se enviaron las instrucciones de recuperacion.", ...result });
+      sendJson(response, 200, { message: "Correo registrado. Enviamos el enlace de recuperacion.", ...result });
+    } catch (error) { sendJson(response, 400, { message: error.message }); }
+    return;
+  }
+
+  if (request.url === "/api/auth/reset" && request.method === "POST") {
+    try {
+      const { token, password } = await parseJsonBody(request);
+      sendJson(response, 200, { message: "Contrasena actualizada. Ya puedes iniciar sesion.", ...(await resetPassword(token, password)) });
     } catch (error) { sendJson(response, 400, { message: error.message }); }
     return;
   }
