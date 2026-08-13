@@ -17,7 +17,6 @@ if (togglePasswordButton && passwordInput) {
     togglePasswordButton.setAttribute("aria-label", isHidden ? "Ocultar contrasena" : "Mostrar contrasena");
   });
 }
-
 if (loginForm) {
   window.gestionUserDb.getStoredUsers();
 

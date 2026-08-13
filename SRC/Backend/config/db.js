@@ -80,6 +80,7 @@ async function ensureAuthTables() {
     );
   }
 }
+
 async function assertAdmin(username) {
   const login = normalizeLoginValue(username);
   const [rows] = await pool.query("SELECT id FROM users WHERE username = ? AND role = 'Administrador'", [login]);

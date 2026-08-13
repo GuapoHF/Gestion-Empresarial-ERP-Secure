@@ -82,7 +82,6 @@ async function handleRequest(request, response) {
     } catch (error) { sendJson(response, 400, { message: error.message }); }
     return;
   }
-
   if (request.url === "/api/auth/recover" && request.method === "POST") {
     try {
       const { email } = await parseJsonBody(request);

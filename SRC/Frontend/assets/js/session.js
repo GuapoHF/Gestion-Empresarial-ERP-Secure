@@ -25,7 +25,6 @@ function applySessionUser(user) {
     if (role) role.textContent = user.role;
   });
 }
-
 function hideAdminAccess() {
   document.querySelectorAll('a[href="./admin.html"], a[href="admin.html"], a[data-module="administrador"]').forEach((link) => {
     const card = link.classList.contains('module-card') || link.classList.contains('admin-card') ? link : null;

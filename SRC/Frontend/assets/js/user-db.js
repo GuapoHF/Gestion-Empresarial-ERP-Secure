@@ -104,7 +104,6 @@ function getPendingRegistrationsLocal() {
 function savePendingRegistrations(registrations) {
   localStorage.setItem(GESTION_REGISTRATION_REQUESTS_KEY, JSON.stringify(registrations));
 }
-
 function createLocalUser(userData) {
   const users = getStoredUsers();
   const username = normalizeLoginValue(userData.username);

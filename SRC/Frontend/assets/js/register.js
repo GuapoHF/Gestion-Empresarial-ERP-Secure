@@ -17,7 +17,6 @@ function normalizeUsernamePart(value) {
     .replace(/[^a-zA-Z]/g, "")
     .toLowerCase();
 }
-
 function updateGeneratedUsername() {
   const firstName = normalizeUsernamePart(firstNameInput.value);
   const lastNameInitial = normalizeUsernamePart(lastNameInput.value).charAt(0);

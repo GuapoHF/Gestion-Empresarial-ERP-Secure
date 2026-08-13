@@ -11,7 +11,6 @@ function setApprovalStatus(message, isError = false) {
 function renderEmptyApprovals() {
   approvalList.innerHTML = '<div class="approval-empty">No hay solicitudes pendientes por autorizar.</div>';
 }
-
 function createApprovalRow(registration) {
   const row = document.createElement("article");
   row.className = "approval-row";
