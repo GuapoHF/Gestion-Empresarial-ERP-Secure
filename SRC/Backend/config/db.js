@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 const pool = require("./connection");
+const { sendRecoveryEmail } = require("./mailer");
 
 function normalizeLoginValue(value = "") {
   return value.trim().toLowerCase();
@@ -138,14 +139,38 @@ async function loginUser(username, password) {
 }
 async function sendPasswordRecovery(email, origin = "http://localhost:3000") {
   await ensureAuthTables();
-  const normalizedEmail = normalizeLoginValue(email);
-  const [rows] = await pool.query("SELECT id, email, username FROM users WHERE email = ?", [normalizedEmail]);
-  if (rows.length === 0) return { sent: true };
+  const normalizedEmail = normalizeLoginValue(email || "");
+  if (!normalizedEmail) throw new Error("Ingresa el correo con el que registraste tu cuenta.");
+
+  const [rows] = await pool.query("SELECT id, email, username FROM users WHERE email = ? LIMIT 1", [normalizedEmail]);
+  if (rows.length === 0) throw new Error("No existe una cuenta registrada con ese correo.");
+
   const token = crypto.randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+  await pool.query("UPDATE password_recovery_tokens SET used_at = NOW() WHERE user_id = ? AND used_at IS NULL", [rows[0].id]);
   await pool.query("INSERT INTO password_recovery_tokens (user_id, token, expires_at) VALUES (?, ?, ?)", [rows[0].id, token, expiresAt]);
-  const recoveryUrl = `${origin}/login.html?recoveryToken=${token}`;
-  console.log(`Enlace de recuperacion para ${rows[0].email}: ${recoveryUrl}`);
-  return { sent: true, recoveryUrl: process.env.NODE_ENV === "production" ? undefined : recoveryUrl };
+
+  const recoveryUrl = `${origin}/restablecer.html?token=${token}`;
+  const delivery = await sendRecoveryEmail({ to: rows[0].email, username: rows[0].username, recoveryUrl });
+  return { sent: true, emailRegistered: true, delivered: delivery.delivered, recoveryUrl: process.env.NODE_ENV === "production" ? undefined : recoveryUrl };
 }
-module.exports = { approveRegistration, getPendingRegistrations, loginUser, rejectRegistration, requestRegistration, sendPasswordRecovery };
+
+async function resetPassword(token, password) {
+  await ensureAuthTables();
+  if (!String(token || "").trim()) throw new Error("El enlace de recuperacion no es valido.");
+  if (String(password || "").trim().length < 8) throw new Error("La nueva contrasena debe tener al menos 8 caracteres.");
+
+  const [rows] = await pool.query(
+    `SELECT id, user_id FROM password_recovery_tokens
+     WHERE token = ? AND used_at IS NULL AND expires_at > NOW()
+     LIMIT 1`,
+    [token]
+  );
+  if (rows.length === 0) throw new Error("El enlace de recuperacion expiro o ya fue usado.");
+
+  await pool.query("UPDATE users SET password = ? WHERE id = ?", [String(password).trim(), rows[0].user_id]);
+  await pool.query("UPDATE password_recovery_tokens SET used_at = NOW() WHERE id = ?", [rows[0].id]);
+  return { reset: true };
+}
+
+module.exports = { approveRegistration, getPendingRegistrations, loginUser, rejectRegistration, requestRegistration, resetPassword, sendPasswordRecovery };

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gestion Empresarial | Restablecer Contrasena</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./assets/css/styles.css?v=4" />
+  </head>
+  <body>
+    <main class="auth-page" data-node-id="1:611">
+      <section class="signup-shell auth-compact" aria-labelledby="reset-title">
+        <a class="brand" href="./login.html" aria-label="Gestion Empresarial">Textiles GH<span>.</span></a>
+
+        <div class="status-message" id="reset-status" hidden>
+          <img src="./assets/icons/success.svg" alt="" />
+          <p>Contrasena actualizada. <span>Ya puedes iniciar sesion.</span></p>
+        </div>
+
+        <header class="signup-header recover-header">
+          <h1 id="reset-title">Restablecer Contrasena</h1>
+          <p>Escribe una nueva contrasena para terminar la recuperacion de tu cuenta.</p>
+        </header>
+
+        <form class="signup-form" id="reset-form">
+          <div class="field login-password">
+            <label for="new-password">Nueva contrasena</label>
+            <div class="password-control">
+              <input id="new-password" name="password" type="password" autocomplete="new-password" minlength="8" required />
+              <button class="icon-button" type="button" id="toggle-password" aria-label="Mostrar contrasena">
+                <img src="./assets/icons/login-eye.svg" alt="" />
+              </button>
+            </div>
+          </div>
+
+          <button class="submit-button" type="submit">Guardar nueva contrasena</button>
+        </form>
+
+        <footer class="signin-footer">
+          <a class="back-login" href="./login.html">
+            <img src="./assets/icons/back.svg" alt="" />
+            Volver a Iniciar Sesion
+          </a>
+        </footer>
+      </section>
+    </main>
+    <script src="./assets/js/user-db.js"></script>
+    <script src="./assets/js/auth.js"></script>
+  </body>
+</html>
