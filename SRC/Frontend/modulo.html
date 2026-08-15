@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="./assets/css/styles.css?v=4" />
+    <link rel="stylesheet" href="./assets/css/styles.css?v=6" />
   </head>
   <body>
     <main class="app-layout">
@@ -25,13 +25,11 @@
         </nav>
         <div class="user-box">
           <div class="avatar">GH</div>
-          <div>
-            <strong>gabrielh</strong>
-            <span>Administrador</span>
-          </div>
+          <div><strong>gabrielh</strong><span>Administrador</span></div>
           <a class="logout" href="./login.html" aria-label="Cerrar sesion"><img src="./assets/icons/logout.svg" alt="" /></a>
         </div>
       </aside>
+
       <section class="workspace">
         <header class="topbar">
           <div class="breadcrumbs">
@@ -40,24 +38,50 @@
             <strong id="crumb-title">Modulo</strong>
           </div>
           <div class="topbar-actions">
-            <span>Lunes, 3 de agosto 2026</span>
+            <span id="current-date">14 de agosto 2026</span>
             <a href="./modulo.html?modulo=ayuda"><img src="./assets/icons/help.svg" alt="" />Ayuda</a>
           </div>
         </header>
-        <section class="content-area">
-          <header class="page-title">
-            <h1 id="module-title">Modulo</h1>
-            <p id="module-description">Vista preparada para continuar el flujo del sistema.</p>
+
+        <section class="content-area module-content-area">
+          <header class="page-title module-page-title">
+            <div><h1 id="module-title">Modulo</h1><p id="module-description">Vista operativa del sistema.</p></div>
+            <button class="primary-action module-primary-action" id="module-primary-action" type="button" hidden></button>
           </header>
-          <div class="empty-module">
-            <img id="module-icon" src="./assets/icons/dashboard.svg" alt="" />
-            <h2 id="module-card-title">Modulo listo</h2>
-            <p>Esta pantalla ya forma parte de la navegacion del frontend. Aqui se puede construir el detalle de este modulo cuando tengas las pantallas de Figma correspondientes.</p>
-            <a class="submit-button module-back" href="./dashboard.html">Volver al Dashboard</a>
-          </div>
+
+          <nav class="module-tabs" id="module-tabs" aria-label="Secciones del modulo"></nav>
+          <section class="module-metrics" id="module-metrics" aria-label="Resumen del modulo"></section>
+          <section class="module-toolbar" id="module-toolbar">
+            <label class="search-control module-search" for="module-search">
+              <img src="./assets/icons/inventory-search.svg" alt="" />
+              <input id="module-search" type="search" placeholder="Buscar..." />
+            </label>
+            <label class="module-filter" for="module-filter">
+              <span>Estado</span>
+              <select id="module-filter"><option value="">Todos</option></select>
+            </label>
+          </section>
+          <section id="module-view" aria-live="polite"></section>
+          <p class="module-toast" id="module-toast" role="status" hidden></p>
         </section>
       </section>
     </main>
+
+    <dialog class="module-dialog" id="module-dialog">
+      <form class="module-dialog-form" id="module-form">
+        <div class="module-dialog-heading">
+          <div><h2 id="module-form-title">Nuevo registro</h2><p id="module-form-help">Completa los datos solicitados.</p></div>
+          <button class="icon-close" id="module-dialog-close" type="button" aria-label="Cerrar">x</button>
+        </div>
+        <div class="module-form-grid" id="module-form-fields"></div>
+        <p class="field-alert" id="module-form-error" hidden>Completa todos los campos requeridos.</p>
+        <div class="module-dialog-actions">
+          <button class="secondary-action" id="module-dialog-cancel" type="button">Cancelar</button>
+          <button class="submit-button" type="submit">Guardar</button>
+        </div>
+      </form>
+    </dialog>
+    <script src="./assets/js/module-data.js"></script>
     <script src="./assets/js/module.js"></script>
     <script src="./assets/js/user-db.js"></script>
     <script src="./assets/js/session.js"></script>

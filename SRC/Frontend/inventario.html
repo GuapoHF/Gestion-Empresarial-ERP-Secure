@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="./assets/css/styles.css?v=4" />
+    <link rel="stylesheet" href="./assets/css/styles.css?v=6" />
   </head>
   <body>
     <main class="app-layout inventory-screen" data-node-id="45:199">
@@ -54,6 +54,16 @@
             <p>Almacen de Telas - 3 registros</p>
           </header>
 
+          <nav class="module-tabs inventory-module-tabs" aria-label="Secciones de inventario">
+            <a class="active" href="./inventario.html">Existencias</a>
+            <a href="./modulo.html?modulo=inventarios&vista=productos">Productos</a>
+            <a href="./modulo.html?modulo=inventarios&vista=kardex">Kardex</a>
+            <a href="./modulo.html?modulo=inventarios&vista=almacenes">Almacenes</a>
+            <a href="./modulo.html?modulo=inventarios&vista=transferencias">Transferencias</a>
+            <a href="./modulo.html?modulo=inventarios&vista=precios">Listas de Precio</a>
+            <a href="./modulo.html?modulo=inventarios&vista=lotes">Lotes</a>
+          </nav>
+
           <div class="inventory-toolbar">
             <label class="search-control" for="inventory-search">
               <img src="./assets/icons/inventory-search.svg" alt="" />
@@ -93,8 +103,19 @@
               <button type="button"><img src="./assets/icons/page-next.svg" alt="Pagina siguiente" /></button>
             </div>
           </div>
+          <p class="module-toast" id="inventory-flash" role="status" hidden></p>
         </section>
       </section>
     </main>
+    <script>
+      const inventoryFlash = sessionStorage.getItem("textiles-gh-flash");
+      if (inventoryFlash) {
+        const message = document.querySelector("#inventory-flash");
+        message.textContent = inventoryFlash;
+        message.hidden = false;
+        sessionStorage.removeItem("textiles-gh-flash");
+        window.setTimeout(() => { message.hidden = true; }, 2800);
+      }
+    </script>
   </body>
 </html>
