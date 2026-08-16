@@ -1,4 +1,11 @@
 {
+  "name": "gestion-empresarial-backend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js && node --check config/db.js && node --check modules/records.js && node --check modules/accounting.js"
+  },
   "dependencies": {
     "mysql2": "^3.23.2"
   }

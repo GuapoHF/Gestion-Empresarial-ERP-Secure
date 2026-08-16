@@ -7,12 +7,12 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="./assets/css/styles.css?v=4" />
+    <link rel="stylesheet" href="./assets/css/styles.css?v=7" />
   </head>
   <body data-admin-only="true">
     <main class="app-layout" data-node-id="51:869">
       <aside class="sidebar">
-        <a class="brand sidebar-brand" href="./dashboard.html">Textiles GH<span>.</span></a>
+        <a class="brand sidebar-brand" href="./dashboard.html">Gestion Empresarial<span>.</span></a>
         <nav class="side-nav" aria-label="Modulos">
           <p>Modulos</p>
           <a href="./dashboard.html"><img src="./assets/icons/dashboard.svg" alt="" />Dashboard</a>
@@ -54,19 +54,26 @@
           </header>
 
           <section class="metric-strip" aria-label="Resumen administrativo">
-            <div><span>Empleados activos</span><strong>24</strong></div>
+            <div><span>Empresas activas</span><strong id="admin-company-count">3</strong></div>
+            <div><span>Solicitudes pendientes</span><strong id="admin-pending-count">0</strong></div>
             <div><span>Roles configurados</span><strong>6</strong></div>
-            <div><span>Catalogos textiles</span><strong>18</strong></div>
             <div><span>Eventos hoy</span><strong>47</strong></div>
           </section>
 
 
           <section class="approval-panel" aria-labelledby="approval-title">
-            <div>
-              <h2 id="approval-title">Autorizacion de cuentas</h2>
-              <p>Revisa las solicitudes de registro y aprueba solo las cuentas validadas por administracion.</p>
+            <div class="approval-heading">
+              <div>
+                <h2 id="approval-title">Autorizacion de cuentas por empresa</h2>
+                <p>Valida la empresa y el area solicitada antes de habilitar el acceso.</p>
+              </div>
+              <div class="approval-filters">
+                <label><span>Empresa</span><select id="approval-company"><option value="">Todas las empresas</option></select></label>
+                <label><span>Estado</span><select id="approval-filter-status"><option>Pendiente</option><option>Aprobada</option><option>Rechazada</option><option>Todos</option></select></label>
+              </div>
             </div>
             <p class="approval-status" id="approval-status" hidden></p>
+            <div class="approval-list-head" aria-hidden="true"><span>Solicitante</span><span>Empresa</span><span>Area</span><span>Solicitud</span><span>Estado</span><span>Acciones</span></div>
             <div class="approval-list" id="approval-list" aria-live="polite"></div>
           </section>
 
@@ -74,13 +81,20 @@
             <a class="admin-card" href="./empleados.html"><img src="./assets/icons/admin.svg" alt="" /><strong>Gestion de Empleados</strong><span>Alta, edicion y expediente laboral del personal.</span><small>Ver empleados</small></a>
             <a class="admin-card" href="./permisos.html"><img src="./assets/icons/help.svg" alt="" /><strong>Roles y Privilegios</strong><span>Permisos por modulo para ventas, compras e inventarios.</span><small>Actualizar accesos</small></a>
             <a class="admin-card" href="./catalogos.html"><img src="./assets/icons/inventarios.svg" alt="" /><strong>Catalogos Maestros de Telas</strong><span>Categorias, unidades de medida y colores textiles.</span><small>Administrar catalogos</small></a>
-            <a class="admin-card" href="./configuracion.html"><img src="./assets/icons/info.svg" alt="" /><strong>Configuracion General</strong><span>Empresa, inventario y parametros de facturacion SAR.</span><small>Ver configuracion</small></a>
+            <a class="admin-card" href="./configuracion.html"><img src="./assets/icons/info.svg" alt="" /><strong>Configuracion General</strong><span>Empresa, inventario y parametros fiscales.</span><small>Ver configuracion</small></a>
             <a class="admin-card" href="./bitacora.html"><img src="./assets/icons/dashboard.svg" alt="" /><strong>Bitacora del Sistema</strong><span>Registro de actividad y auditoria de cambios.</span><small>Ver actividad</small></a>
             <a class="admin-card" href="./modulo.html?modulo=reportes"><img src="./assets/icons/costos.svg" alt="" /><strong>Reportes Globales</strong><span>Indicadores de inventario, ventas y margen por tela.</span><small>Consultar reportes</small></a>
           </section>
         </section>
       </section>
     </main>
+    <dialog class="module-dialog" id="rejection-dialog">
+      <form class="module-dialog-form" id="rejection-form">
+        <div class="module-dialog-heading"><div><h2>Rechazar solicitud</h2><p>Registra un motivo breve para mantener trazabilidad.</p></div><button class="icon-close" type="button" id="rejection-close" aria-label="Cerrar">x</button></div>
+        <label class="field rejection-field"><span>Motivo</span><textarea id="rejection-reason" maxlength="300" placeholder="Ej. No fue posible validar la relacion con la empresa." required></textarea></label>
+        <div class="module-dialog-actions"><button class="secondary-action" type="button" id="rejection-cancel">Cancelar</button><button class="submit-button" type="submit">Confirmar rechazo</button></div>
+      </form>
+    </dialog>
     <script src="./assets/js/user-db.js"></script>
     <script src="./assets/js/session.js"></script>
     <script src="./assets/js/admin.js"></script>

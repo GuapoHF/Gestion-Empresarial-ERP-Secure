@@ -191,6 +191,10 @@ window.TEXTILES_MODULES = {
         columns: ["Tarea", "Responsable", "Fecha limite", "Avance", "Hallazgos", "Estado", "Acciones"], statusIndex: 5,
         rows: [["Conciliar bancos", "Ana Ruiz", "20 ago 2026", "100%", "0", "Completado"], ["Validar cartera", "Carlos Mejia", "22 ago 2026", "80%", "3", "En proceso"], ["Costear inventario", "Mariana Lopez", "24 ago 2026", "65%", "2", "En proceso"], ["Emitir estados", "Gabriel Hernandez", "31 ago 2026", "0%", "0", "Pendiente"]],
       },
+      estados: {
+        label: "Estados Financieros", description: "Genera documentos contables formales por empresa y periodo.",
+        action: "Abrir Generador", type: "accounting-hub",
+      },
     },
   },
   costos: {

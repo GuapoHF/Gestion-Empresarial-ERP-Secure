@@ -3304,3 +3304,549 @@ textarea:focus {
     grid-template-columns: 1fr;
   }
 }
+
+.success-alert {
+  background: #eef8f2;
+  border-color: rgba(45, 106, 79, 0.2);
+  color: #2d6a4f;
+}
+
+.approval-heading {
+  align-items: flex-end;
+  display: flex;
+  gap: 24px;
+  justify-content: space-between;
+}
+
+.approval-filters {
+  display: flex;
+  gap: 10px;
+}
+
+.approval-filters label,
+.report-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.approval-filters label > span,
+.report-controls label > span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 15px;
+  text-transform: uppercase;
+}
+
+.approval-filters select {
+  height: 36px;
+  min-width: 170px;
+}
+
+.approval-list-head,
+.approval-row-detailed {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(190px, 1.35fr) minmax(150px, 1fr) 100px 100px 90px minmax(145px, auto);
+}
+
+.approval-list-head {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  margin-top: 18px;
+  padding: 10px 14px;
+  text-transform: uppercase;
+}
+
+.approval-row-detailed {
+  min-height: 70px;
+  padding: 12px 14px;
+}
+
+.approval-row-detailed > span,
+.approval-person {
+  min-width: 0;
+}
+
+.approval-person strong,
+.approval-person span,
+.approval-person small,
+.approval-row-detailed > span strong,
+.approval-row-detailed > span small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.approval-person span,
+.approval-person small,
+.approval-row-detailed > span small,
+.approval-processed {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 15px;
+}
+
+.approval-person strong,
+.approval-row-detailed > span strong {
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.rejection-field {
+  margin-top: 22px;
+}
+
+.rejection-field textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+.accounting-document-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 22px;
+}
+
+.accounting-document-card {
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  color: var(--text);
+  min-height: 180px;
+  padding: 20px;
+}
+
+.accounting-document-card > span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.accounting-document-card h2 {
+  font-size: 16px;
+  line-height: 24px;
+  margin: 12px 0 4px;
+}
+
+.accounting-document-card p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 18px;
+  margin: 0;
+}
+
+.accounting-document-card strong {
+  color: var(--primary);
+  display: block;
+  font-size: 11px;
+  margin-top: 28px;
+}
+
+.accounting-report-content {
+  background: #f1f2f4;
+}
+
+.report-controls {
+  align-items: flex-end;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  display: flex;
+  gap: 12px;
+  margin-top: 22px;
+  padding: 14px 16px;
+}
+
+.report-controls select,
+.report-controls input {
+  height: 38px;
+  min-width: 190px;
+}
+
+.report-controls .secondary-action,
+.report-controls .primary-action {
+  justify-content: center;
+  margin-left: 0;
+  min-width: 140px;
+}
+
+.report-controls .secondary-action {
+  margin-left: auto;
+}
+
+.report-status {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 16px 0 0;
+}
+
+.accounting-paper-shell {
+  margin-top: 20px;
+  overflow-x: auto;
+  padding-bottom: 28px;
+}
+
+.accounting-paper-stack {
+  display: grid;
+  gap: 22px;
+  margin: 0 auto;
+  width: max-content;
+}
+
+.accounting-paper {
+  background: #fff;
+  box-shadow: 0 8px 28px rgba(24, 24, 27, 0.09);
+  color: #111;
+  display: flex;
+  flex-direction: column;
+  font-family: Arial, sans-serif;
+  margin: 0 auto;
+  padding: 15mm 14mm 12mm;
+}
+
+.accounting-paper.report-portrait {
+  min-height: 297mm;
+  width: 210mm;
+}
+
+.accounting-paper.report-landscape {
+  min-height: 210mm;
+  width: 297mm;
+}
+
+.paper-header h2 {
+  font-size: 16px;
+  letter-spacing: 0;
+  margin: 0;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.paper-header > div {
+  display: grid;
+  font-size: 9px;
+  gap: 4px 40px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 18px auto 22px;
+  max-width: 78%;
+}
+
+.paper-header h1 {
+  border-bottom: 2px solid #111;
+  font-size: 18px;
+  margin: 0 0 8px;
+  padding-bottom: 12px;
+  text-align: center;
+}
+
+.paper-table {
+  border-collapse: collapse;
+  font-size: 9px;
+  line-height: 1.35;
+  width: 100%;
+}
+
+.paper-table th {
+  border-bottom: 1.5px solid #111;
+  font-weight: 600;
+  padding: 5px 6px;
+  text-align: right;
+}
+
+.paper-table th:first-child,
+.paper-table td:first-child,
+.paper-table th:nth-child(2):not(:last-child) {
+  text-align: left;
+}
+
+.paper-table td {
+  padding: 3px 6px;
+  text-align: right;
+  vertical-align: top;
+}
+
+.paper-table .section-row td,
+.paper-table .major-row td {
+  font-weight: 700;
+  padding-top: 10px;
+  text-align: left;
+}
+
+.paper-table .major-row td {
+  border-top: 1.5px solid #111;
+}
+
+.paper-table .total-row td {
+  border-top: 1px solid #111;
+  font-weight: 600;
+}
+
+.paper-table .grand-total td,
+.paper-table tr.grand-total td {
+  border-bottom: 2px solid #111;
+  border-top: 2px solid #111;
+  font-size: 10px;
+  font-weight: 700;
+  padding-block: 6px;
+}
+
+.paper-table .indent {
+  padding-left: 22px;
+}
+
+.trial-table,
+.payroll-table {
+  font-size: 8px;
+}
+
+.trial-table th:nth-child(n + 3),
+.trial-table td:nth-child(n + 3),
+.payroll-table th:last-child,
+.payroll-table td:last-child {
+  text-align: right;
+}
+
+.paper-note {
+  font-size: 9px;
+  font-weight: 600;
+  margin: 8px 0;
+}
+
+.paper-filter-grid {
+  display: grid;
+  font-size: 8px;
+  gap: 4px 24px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 6px 0 10px;
+}
+
+.sales-profit-table {
+  font-size: 7.4px;
+}
+
+.sales-profit-table th:nth-child(n + 3),
+.sales-profit-table td:nth-child(n + 3) {
+  text-align: right;
+}
+
+.sales-profit-table td {
+  padding-block: 2px;
+}
+
+.invoice-header {
+  align-items: start;
+  border-bottom: 5px solid #153e63;
+  color: #153e63;
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: 10px;
+}
+
+.invoice-header > div {
+  display: grid;
+  gap: 3px;
+}
+
+.invoice-header > div:first-child strong {
+  font-size: 24px;
+  letter-spacing: 0;
+}
+
+.invoice-header > div:last-child {
+  text-align: right;
+}
+
+.invoice-header > div:last-child strong {
+  color: #a12b2b;
+  font-size: 15px;
+}
+
+.invoice-header span,
+.invoice-meta {
+  font-size: 8px;
+}
+
+.invoice-meta {
+  border: 1px solid #153e63;
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 0.8fr;
+  margin: 12px 0;
+}
+
+.invoice-meta > div {
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+}
+
+.invoice-meta > div + div {
+  border-left: 1px solid #153e63;
+}
+
+.purchase-invoice-table {
+  border: 1px solid #153e63;
+  font-size: 7.8px;
+}
+
+.purchase-invoice-table th {
+  background: #153e63;
+  border-color: #153e63;
+  color: #fff;
+  text-align: center;
+}
+
+.purchase-invoice-table td {
+  border-right: 1px solid #c7d2dc;
+  padding-block: 5px;
+}
+
+.purchase-invoice-table td:nth-child(3) {
+  text-align: left;
+}
+
+.invoice-totals {
+  align-self: flex-end;
+  border: 1px solid #153e63;
+  display: grid;
+  font-size: 9px;
+  gap: 5px;
+  margin-top: 12px;
+  min-width: 250px;
+  padding: 9px;
+}
+
+.invoice-totals span {
+  display: flex;
+  justify-content: space-between;
+}
+
+.invoice-totals strong {
+  color: #153e63;
+  font-size: 12px;
+}
+
+.invoice-note {
+  border-top: 1px solid #153e63;
+  font-size: 8px;
+  font-weight: 600;
+  margin-top: 12px;
+  padding-top: 8px;
+}
+
+.paper-footer {
+  border-top: 2px solid #111;
+  display: flex;
+  font-size: 9px;
+  font-weight: 600;
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: 6px;
+}
+
+@media (max-width: 1050px) {
+  .approval-heading,
+  .report-controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .approval-filters {
+    width: 100%;
+  }
+
+  .approval-filters label {
+    flex: 1;
+  }
+
+  .approval-list-head {
+    display: none;
+  }
+
+  .approval-row-detailed {
+    align-items: start;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .report-controls .secondary-action {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 680px) {
+  .approval-filters,
+  .approval-row-detailed {
+    grid-template-columns: 1fr;
+  }
+
+  .approval-filters {
+    display: grid;
+  }
+
+  .approval-filters select,
+  .report-controls select,
+  .report-controls input,
+  .report-controls button {
+    max-width: none;
+    width: 100%;
+  }
+
+  .accounting-document-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  body {
+    background: #fff;
+  }
+
+  .accounting-report-screen > .sidebar,
+  .accounting-report-screen .topbar,
+  .accounting-report-screen .report-page-heading,
+  .accounting-report-screen .report-controls,
+  .accounting-report-screen .report-status {
+    display: none !important;
+  }
+
+  .accounting-report-screen,
+  .accounting-report-screen .workspace,
+  .accounting-report-content,
+  .accounting-paper-shell {
+    background: #fff;
+    display: block;
+    margin: 0;
+    min-height: 0;
+    overflow: visible;
+    padding: 0;
+    width: auto;
+  }
+
+  .accounting-paper {
+    box-shadow: none;
+    margin: 0;
+    min-height: calc(100vh - 2mm);
+    padding: 0;
+    width: 100%;
+  }
+
+  .accounting-paper-stack {
+    display: block;
+    width: 100%;
+  }
+
+  .accounting-paper-stack .report-page {
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .accounting-paper-stack .report-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+}

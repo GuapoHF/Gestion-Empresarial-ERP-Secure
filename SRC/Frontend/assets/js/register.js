@@ -11,32 +11,36 @@ const signupForm = document.querySelector("#signup-form");
 const registerAlert = document.querySelector("#register-alert");
 
 function normalizeUsernamePart(value) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-zA-Z]/g, "")
-    .toLowerCase();
+  return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
 }
+
 function updateGeneratedUsername() {
   const firstName = normalizeUsernamePart(firstNameInput.value);
   const lastNameInitial = normalizeUsernamePart(lastNameInput.value).charAt(0);
-  usernameInput.value = `${firstName}${lastNameInitial}`;
+  usernameInput.value = firstName && lastNameInitial ? `${firstName}${lastNameInitial}` : "";
 }
 
-function showRegisterAlert(message) {
-  if (!registerAlert) {
-    return;
-  }
-
+function showRegisterAlert(message, success = false) {
   registerAlert.querySelector("span").textContent = message;
+  registerAlert.classList.toggle("success-alert", success);
   registerAlert.hidden = false;
+}
+
+async function loadCompanies() {
+  try {
+    const companies = await window.gestionUserDb.listCompanies();
+    companyInput.innerHTML = '<option value="">Selecciona una empresa</option>' + companies.map((company) =>
+      `<option value="${company.id}">${company.name}</option>`
+    ).join("");
+    companyInput.disabled = false;
+  } catch (error) {
+    companyInput.innerHTML = '<option value="">No se pudieron cargar las empresas</option>';
+    showRegisterAlert(error.message);
+  }
 }
 
 firstNameInput.addEventListener("input", updateGeneratedUsername);
 lastNameInput.addEventListener("input", updateGeneratedUsername);
-
-window.gestionUserDb.getStoredUsers();
-
 togglePasswordButton.addEventListener("click", () => {
   const isHidden = passwordInput.type === "password";
   passwordInput.type = isHidden ? "text" : "password";
@@ -46,26 +50,35 @@ togglePasswordButton.addEventListener("click", () => {
 signupForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   registerAlert.hidden = true;
-
+  if (!signupForm.checkValidity()) {
+    signupForm.reportValidity();
+    return;
+  }
+  const submitButton = signupForm.querySelector("button[type='submit']");
   try {
+    submitButton.disabled = true;
+    submitButton.textContent = "Enviando solicitud...";
     await window.gestionUserDb.createUser({
       firstName: firstNameInput.value,
       lastName: lastNameInput.value,
       secondLastName: secondLastNameInput.value,
       email: emailInput.value,
       password: passwordInput.value,
-      company: companyInput.value,
+      companyId: Number(companyInput.value),
       role: roleInput.value,
       username: usernameInput.value,
     });
-
     sessionStorage.setItem("gestionUser", usernameInput.value);
-    showRegisterAlert("Solicitud enviada. Un administrador debe autorizar tu cuenta antes de iniciar sesion.");
+    showRegisterAlert("Solicitud enviada. El administrador validara tu empresa y area antes de habilitar el acceso.", true);
     signupForm.reset();
     updateGeneratedUsername();
   } catch (error) {
     showRegisterAlert(error.message);
+  } finally {
+    submitButton.disabled = false;
+    submitButton.textContent = "Crear Cuenta";
   }
 });
 
+loadCompanies();
 updateGeneratedUsername();

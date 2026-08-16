@@ -20,22 +20,23 @@ if (togglePasswordButton && passwordInput) {
   });
 }
 if (loginForm) {
-  window.gestionUserDb.getStoredUsers();
-
   loginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     loginAlert.hidden = true;
-
-    const loggedUser = await window.gestionUserDb.loginUser(usernameInput.value, passwordInput.value);
-
-    if (!loggedUser) {
-      passwordInput.value = "";
-      passwordInput.focus();
+    try {
+      const loggedUser = await window.gestionUserDb.loginUser(usernameInput.value, passwordInput.value);
+      if (!loggedUser) {
+        passwordInput.value = "";
+        passwordInput.focus();
+        loginAlert.querySelector("span").textContent = "Usuario o contrasena incorrectos, o la cuenta sigue pendiente.";
+        loginAlert.hidden = false;
+        return;
+      }
+      window.location.href = "./dashboard.html";
+    } catch (error) {
+      loginAlert.querySelector("span").textContent = error.message;
       loginAlert.hidden = false;
-      return;
     }
-
-    window.location.href = "./dashboard.html";
   });
 }
 

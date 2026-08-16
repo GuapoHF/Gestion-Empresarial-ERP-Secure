@@ -4,6 +4,16 @@ const guides = window.TEXTILES_GUIDES || [];
 const params = new URLSearchParams(window.location.search);
 const requestedModule = params.get("modulo") || "compras";
 const redirects = { administrador: "./admin.html", actividad: "./bitacora.html", configuracion: "./configuracion.html" };
+const moduleSessionUser = window.gestionUserDb.getCurrentUser() || {};
+
+function localizeBusinessText(value) {
+  let text = String(value ?? "");
+  if (moduleSessionUser.countryCode === "MX") {
+    text = text.replaceAll("RTN", "RFC").replaceAll("HNL", "MXN").replaceAll("ISV", "IVA").replaceAll("SAR", "SAT");
+    text = text.replace(/(^|\s)L\s(?=\d)/g, "$1$ ");
+  }
+  return text;
+}
 
 if (redirects[requestedModule]) window.location.replace(redirects[requestedModule]);
 
@@ -41,7 +51,30 @@ function loadRows(moduleKey, viewKey, defaults = []) {
   }
 }
 
-function saveRows() { localStorage.setItem(storageKey, JSON.stringify(rows)); }
+async function saveRows() {
+  localStorage.setItem(storageKey, JSON.stringify(rows));
+  try {
+    await window.gestionUserDb.saveDataset(currentKey, currentViewKey, rows);
+  } catch (error) {
+    showToast(`${error.message} Los cambios quedaron guardados solo en este navegador.`);
+  }
+}
+
+async function syncDataset() {
+  try {
+    const dataset = await window.gestionUserDb.getDataset(currentKey, currentViewKey);
+    if (dataset.initialized) {
+      rows = dataset.rows;
+      localStorage.setItem(storageKey, JSON.stringify(rows));
+    } else {
+      await window.gestionUserDb.saveDataset(currentKey, currentViewKey, rows);
+    }
+    renderFilterOptions();
+    renderTable();
+  } catch (error) {
+    showToast(`${error.message} Se muestran los datos disponibles en este navegador.`);
+  }
+}
 
 function escapeHtml(value) {
   return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
@@ -101,11 +134,11 @@ function renderTable() {
     row.join(" ").toLowerCase().includes(term) && (!status || row[statusIndex] === status)
   );
   const body = visibleRows.map(({ row, index }) => {
-    const cells = row.map((cell, cellIndex) => `<span>${cellIndex === statusIndex ? `<b class="status ${statusClass(cell)}">${escapeHtml(cell)}</b>` : escapeHtml(cell)}</span>`).join("");
+    const cells = row.map((cell, cellIndex) => `<span>${cellIndex === statusIndex ? `<b class="status ${statusClass(cell)}">${escapeHtml(localizeBusinessText(cell))}</b>` : escapeHtml(localizeBusinessText(cell))}</span>`).join("");
     return `<div class="module-table-row" data-row-index="${index}">${cells}${renderActions(index)}</div>`;
   }).join("");
   view.innerHTML = `<div class="module-table-wrap"><div class="module-table" style="--columns:${currentView.columns.length}">
-    <div class="module-table-row module-table-head">${currentView.columns.map((column) => `<span>${escapeHtml(column)}</span>`).join("")}</div>${body}</div>
+    <div class="module-table-row module-table-head">${currentView.columns.map((column) => `<span>${escapeHtml(localizeBusinessText(column))}</span>`).join("")}</div>${body}</div>
     ${visibleRows.length ? "" : '<p class="module-empty-state">No hay registros que coincidan con la busqueda.</p>'}</div>`;
 }
 
@@ -135,7 +168,7 @@ function renderGuides() {
     const term = input.value.trim().toLowerCase();
     const matches = guides.filter((guide) => guide.join(" ").toLowerCase().includes(term));
     view.innerHTML = `<h2 class="module-section-title">Guias por proceso</h2><div class="help-grid">${matches.map(([title, description, route, moduleKey, viewKey]) => `<a class="help-card" href="${guideHref(moduleKey, viewKey)}"><strong>${escapeHtml(title)}</strong><span>${escapeHtml(description)}</span><small>${escapeHtml(route)} &gt;</small></a>`).join("")}</div>
-      <div class="support-banner"><div><strong>Soporte interno de Textiles GH</strong><span>soporte@textilesgh.com &middot; Ext. 104</span></div><a href="mailto:soporte@textilesgh.com?subject=Solicitud%20de%20soporte%20Textiles%20GH">Crear solicitud &gt;</a></div>`;
+      <div class="support-banner"><div><strong>Soporte interno de ${escapeHtml(moduleSessionUser.company || "Gestion Empresarial")}</strong><span>soporte@gestion-empresarial.local &middot; Ext. 104</span></div><a href="mailto:soporte@gestion-empresarial.local?subject=Solicitud%20de%20soporte">Crear solicitud &gt;</a></div>`;
   };
   input.addEventListener("input", draw);
   draw();
@@ -151,7 +184,7 @@ const posProducts = [
 ];
 
 function money(value) {
-  return new Intl.NumberFormat("es-HN", { style: "currency", currency: "HNL", minimumFractionDigits: 2 }).format(value);
+  return new Intl.NumberFormat(moduleSessionUser.locale || "es-HN", { style: "currency", currency: moduleSessionUser.currencyCode || "HNL", minimumFractionDigits: 2 }).format(value);
 }
 
 function renderPosProducts(products) {
@@ -161,7 +194,8 @@ function renderPosProducts(products) {
 function renderPos() {
   toolbar.hidden = true;
   const subtotal = posCart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const tax = subtotal * 0.15;
+  const taxRate = Number(moduleSessionUser.taxRate || 15);
+  const tax = subtotal * (taxRate / 100);
   const total = subtotal + tax;
   view.innerHTML = `<div class="pos-layout"><section class="pos-products">
     <div class="pos-section-heading"><div><h2>Productos disponibles</h2><p>Selecciona una tela para agregarla a la venta.</p></div><label class="search-control pos-search"><img src="./assets/icons/inventory-search.svg" alt="" /><input id="pos-search" type="search" placeholder="Buscar tela o codigo..." /></label></div>
@@ -169,7 +203,7 @@ function renderPos() {
     <aside class="pos-cart"><div class="pos-cart-heading"><div><h2>Venta actual</h2><p>Folio POS-2026-0142</p></div><button type="button" data-pos="clear"${posCart.length ? "" : " disabled"}>Vaciar</button></div>
     <label class="pos-field"><span>Cliente</span><select><option>Publico general</option><option>Confecciones Atlas</option><option>Uniformes Rivera</option><option>Moda Centro</option></select></label>
     <div class="pos-cart-items">${posCart.length ? posCart.map((item) => `<div class="pos-cart-row"><div><strong>${escapeHtml(item.name)}</strong><small>${money(item.price)} / ${escapeHtml(item.unit)}</small></div><div class="pos-quantity"><button type="button" data-pos="decrease" data-id="${item.id}" aria-label="Reducir cantidad">-</button><span>${item.quantity}</span><button type="button" data-pos="increase" data-id="${item.id}" aria-label="Aumentar cantidad">+</button></div><strong>${money(item.price * item.quantity)}</strong></div>`).join("") : '<div class="pos-empty"><strong>Aun no hay productos</strong><span>Agrega telas desde el catalogo para iniciar la venta.</span></div>'}</div>
-    <div class="pos-summary"><div><span>Subtotal</span><strong>${money(subtotal)}</strong></div><div><span>ISV 15%</span><strong>${money(tax)}</strong></div><div class="pos-total"><span>Total</span><strong>${money(total)}</strong></div></div>
+    <div class="pos-summary"><div><span>Subtotal</span><strong>${money(subtotal)}</strong></div><div><span>${moduleSessionUser.countryCode === "MX" ? "IVA" : "ISV"} ${taxRate}%</span><strong>${money(tax)}</strong></div><div class="pos-total"><span>Total</span><strong>${money(total)}</strong></div></div>
     <label class="pos-field"><span>Forma de pago</span><select><option>Efectivo</option><option>Tarjeta</option><option>Transferencia</option><option>Credito autorizado</option></select></label>
     <button class="primary-action pos-complete" type="button" data-pos="complete"${posCart.length ? "" : " disabled"}>Cobrar y finalizar venta</button></aside></div>`;
   const posSearch = document.querySelector("#pos-search");
@@ -209,9 +243,9 @@ function buildForm(row = []) {
   formFields.innerHTML = currentView.fields.map(([label, type, option], index) => {
     const value = normalizeInputValue(row[index] || "", type);
     if (type === "select") {
-      return `<label class="field"><span>${escapeHtml(label)}</span><select name="field-${index}" required>${option.map((item) => `<option${item === value ? " selected" : ""}>${escapeHtml(item)}</option>`).join("")}</select></label>`;
+      return `<label class="field"><span>${escapeHtml(localizeBusinessText(label))}</span><select name="field-${index}" required>${option.map((item) => `<option value="${escapeHtml(item)}"${item === value ? " selected" : ""}>${escapeHtml(localizeBusinessText(item))}</option>`).join("")}</select></label>`;
     }
-    return `<label class="field"><span>${escapeHtml(label)}</span><input name="field-${index}" type="${escapeHtml(type)}" value="${escapeHtml(value)}" placeholder="${escapeHtml(option)}" required /></label>`;
+    return `<label class="field"><span>${escapeHtml(localizeBusinessText(label))}</span><input name="field-${index}" type="${escapeHtml(type)}" value="${escapeHtml(value)}" placeholder="${escapeHtml(localizeBusinessText(option))}" required /></label>`;
   }).join("");
 }
 
@@ -232,43 +266,65 @@ function closeForm() {
 }
 
 function formatFieldValue(value, type) {
-  if (type === "date") return new Intl.DateTimeFormat("es-HN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(`${value}T12:00:00Z`)).replace(".", "");
-  if (type === "number") return `L ${Number(value).toLocaleString("es-HN", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+  if (type === "date") return new Intl.DateTimeFormat(moduleSessionUser.locale || "es-HN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(`${value}T12:00:00Z`)).replace(".", "");
+  if (type === "number") return `${moduleSessionUser.currencySymbol || "L"} ${Number(value).toLocaleString(moduleSessionUser.locale || "es-HN", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
   return value;
 }
 
-function appendTargetRow(moduleKey, viewKey, row) {
+async function appendTargetRow(moduleKey, viewKey, row) {
   const targetView = modules[moduleKey].views[viewKey];
-  const targetRows = loadRows(moduleKey, viewKey, targetView.rows || []);
+  let targetRows = loadRows(moduleKey, viewKey, targetView.rows || []);
+  try {
+    const dataset = await window.gestionUserDb.getDataset(moduleKey, viewKey);
+    if (dataset.initialized) targetRows = dataset.rows;
+  } catch (error) {
+    // The local copy remains available if the server is temporarily unavailable.
+  }
   targetRows.unshift(row);
   localStorage.setItem(rowsStorageKey(moduleKey, viewKey), JSON.stringify(targetRows));
+  await window.gestionUserDb.saveDataset(moduleKey, viewKey, targetRows);
+}
+
+function renderAccountingHub() {
+  toolbar.hidden = true;
+  metricsContainer.hidden = true;
+  const documents = [
+    ["income-statement", "Estado de resultados", "Ingresos, costos, gastos y utilidad del periodo."],
+    ["balance-sheet", "Balance general", "Activo, pasivo y capital contable comparados."],
+    ["trial-balance", "Balanza de comprobacion", "Saldos iniciales, debe, haber y saldo final por cuenta."],
+    ["payroll-catalog", "Percepciones y deducciones", "Catalogo de conceptos y acumulados de nomina."],
+    ["sales-profit", "Ventas y utilidad", "Cantidad, costo, precio, utilidad y margen por producto."],
+    ["purchase-invoice", "Factura de compra", "Documento de proveedor, recepcion, pesos e importes."],
+  ];
+  view.innerHTML = `<div class="accounting-document-grid">${documents.map(([type, title, description]) => `
+    <a class="accounting-document-card" href="./reportes-contables.html?tipo=${type}"><span>Documento contable</span><h2>${title}</h2><p>${description}</p><strong>Generar documento &gt;</strong></a>`).join("")}</div>`;
 }
 
 function nextNumber(prefix) {
   return `${prefix}-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`;
 }
 
-function runWorkflow(index) {
+async function runWorkflow(index) {
   const row = rows[index];
   const type = currentView.workflow.type;
   if (type === "requisition-to-order") {
-    appendTargetRow("compras", "ordenes", [nextNumber("OC"), "Proveedor por asignar", row[2], row[3], "L 0", "Borrador"]);
+    await appendTargetRow("compras", "ordenes", [nextNumber("OC"), "Proveedor por asignar", row[2], row[3], "L 0", "Borrador"]);
     navigate("compras", "ordenes");
   } else if (type === "order-to-receipt") {
-    appendTargetRow("compras", "recepciones", [nextNumber("REC"), row[0], row[1], "Lote por capturar", "0 m", "0 m", "Pendiente"]);
+    await appendTargetRow("compras", "recepciones", [nextNumber("REC"), row[0], row[1], "Lote por capturar", "0 m", "0 m", "Pendiente"]);
     navigate("compras", "recepciones");
   } else if (type === "receipt-to-stock") {
     sessionStorage.setItem("textiles-gh-flash", `${row[0]} ingresada al inventario.`);
     window.location.href = "./inventario.html";
   } else if (type === "quote-to-order") {
-    appendTargetRow("ventas", "pedidos", [nextNumber("PED"), row[1], row[2], row[3], row[4], "Pendiente"]);
+    await appendTargetRow("ventas", "pedidos", [nextNumber("PED"), row[1], row[2], row[3], row[4], "Pendiente"]);
     navigate("ventas", "pedidos");
   } else if (type === "order-to-invoice") {
-    const today = new Intl.DateTimeFormat("es-HN", { day: "numeric", month: "short", year: "numeric" }).format(new Date()).replace(".", "");
-    appendTargetRow("ventas", "facturas", [nextNumber("FAC"), row[1], "Correlativo por asignar", today, row[4], "Borrador"]);
+    const today = new Intl.DateTimeFormat(moduleSessionUser.locale || "es-HN", { day: "numeric", month: "short", year: "numeric" }).format(new Date()).replace(".", "");
+    await appendTargetRow("ventas", "facturas", [nextNumber("FAC"), row[1], "Correlativo por asignar", today, row[4], "Borrador"]);
     navigate("ventas", "facturas");
   } else if (type === "invoice-to-payment") {
-    appendTargetRow("ventas", "cobranza", [row[0], row[1], row[3], row[4], row[4], "0-15 dias", "Por vencer"]);
+    await appendTargetRow("ventas", "cobranza", [row[0], row[1], row[3], row[4], row[4], "0-15 dias", "Por vencer"]);
     navigate("ventas", "cobranza");
   } else if (type === "client-to-collections") {
     navigate("ventas", "cobranza");
@@ -287,6 +343,10 @@ function exportReport(index = 0) {
 }
 
 function handlePrimaryAction() {
+  if (currentView.type === "accounting-hub") {
+    window.location.href = "./reportes-contables.html";
+    return;
+  }
   if (currentView.fields) return openForm();
   if (currentView.specialAction === "recalculate") {
     const original = actionButton.textContent;
@@ -308,7 +368,7 @@ function initializePage() {
   document.querySelector("#module-title").textContent = currentModule.title;
   document.querySelector("#crumb-title").textContent = `${currentModule.title} / ${currentView.label}`;
   document.querySelector("#module-description").textContent = currentView.description;
-  document.querySelector("#current-date").textContent = new Intl.DateTimeFormat("es-HN", { day: "numeric", month: "long", year: "numeric" }).format(new Date());
+  document.querySelector("#current-date").textContent = new Intl.DateTimeFormat(moduleSessionUser.locale || "es-HN", { day: "numeric", month: "long", year: "numeric" }).format(new Date());
   document.querySelectorAll(".side-nav a").forEach((link) => link.classList.toggle("active", link.dataset.module === currentKey));
   renderTabs();
   renderMetrics();
@@ -319,15 +379,17 @@ function initializePage() {
   if (currentView.type === "reports") return renderReports();
   if (currentView.type === "help") return renderGuides();
   if (currentView.type === "pos") return renderPos();
+  if (currentView.type === "accounting-hub") return renderAccountingHub();
   toolbar.hidden = false;
   searchInput.placeholder = currentView.search || "Buscar...";
   renderFilterOptions();
   renderTable();
   searchInput.addEventListener("input", renderTable);
   filterInput.addEventListener("change", renderTable);
+  syncDataset();
 }
 
-view.addEventListener("click", (event) => {
+view.addEventListener("click", async (event) => {
   const posButton = event.target.closest("[data-pos]");
   if (posButton) return handlePosAction(posButton);
   const reportButton = event.target.closest("[data-report]");
@@ -336,18 +398,22 @@ view.addEventListener("click", (event) => {
   if (!button) return;
   const index = Number(button.closest(".row-actions")?.dataset.index);
   if (button.dataset.action === "edit") openForm(index);
-  if (button.dataset.action === "workflow") runWorkflow(index);
+  if (button.dataset.action === "workflow") {
+    button.disabled = true;
+    try { await runWorkflow(index); }
+    catch (error) { button.disabled = false; showToast(error.message); }
+  }
   if (button.dataset.action === "details") showToast("Detalle consultado. No hay cambios pendientes.");
   if (button.dataset.action === "delete") {
     rows.splice(index, 1);
-    saveRows();
+    await saveRows();
     renderFilterOptions();
     renderTable();
     showToast("Registro eliminado correctamente.");
   }
 });
 
-form.addEventListener("submit", (event) => {
+form.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!form.checkValidity()) {
     formError.hidden = false;
@@ -359,7 +425,7 @@ form.addEventListener("submit", (event) => {
   const values = currentView.fields.map(([, type], index) => formatFieldValue(data.get(`field-${index}`), type));
   if (wasEditing) rows[editIndex] = values;
   else rows.unshift(values);
-  saveRows();
+  await saveRows();
   closeForm();
   renderFilterOptions();
   renderTable();
