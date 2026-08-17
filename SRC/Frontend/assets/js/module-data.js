@@ -65,7 +65,7 @@ window.TEXTILES_MODULES = {
       clientes: {
         label: "Clientes", description: "Expediente comercial, credito, contactos y seguimiento de clientes.",
         action: "+ Nuevo Cliente", search: "Buscar cliente, RTN o vendedor...",
-        metrics: [["Clientes activos", "32", "5 compraron esta semana"], ["Credito autorizado", "L 680,000", "63% utilizado"], ["Cartera al dia", "87%", "+4% este mes"], ["Retencion", "92%", "Ultimos 12 meses"]],
+        metrics: "sales-clients",
         columns: ["Codigo", "Cliente", "RTN", "Vendedor", "Limite", "Saldo", "Estado", "Acciones"], statusIndex: 6,
         rows: [["CLI-001", "Confecciones Atlas", "0801-2004-16642", "Carlos Mejia", "L 120,000", "L 24,600", "Activo"], ["CLI-002", "Uniformes Rivera", "0501-1999-62310", "Carlos Mejia", "L 85,000", "L 31,840", "Activo"], ["CLI-003", "Moda Centro", "0801-2010-44718", "Ana Ruiz", "L 45,000", "L 12,150", "Activo"], ["CLI-004", "Hotel Mirador", "0801-1994-35109", "Carlos Mejia", "L 160,000", "L 39,900", "Revision"]],
         fields: [["Codigo", "text", "CLI-005"], ["Cliente", "text", "Razon social"], ["RTN", "text", "Registro tributario"], ["Vendedor", "text", "Responsable"], ["Limite", "number", "Limite de credito"], ["Saldo", "number", "Saldo inicial"], ["Estado", "select", ["Activo", "Revision", "Suspendido"]]],
@@ -90,7 +90,7 @@ window.TEXTILES_MODULES = {
       facturas: {
         label: "Facturas", description: "Facturas SAR, notas de venta y documentos comerciales emitidos.",
         action: "+ Nueva Factura", search: "Buscar factura, cliente o pedido...",
-        metrics: [["Ventas del mes", "L 426,850", "+12.4% contra julio"], ["Facturas abiertas", "14", "L 98,400 por cobrar"], ["Pedidos por facturar", "6", "4 salen hoy"], ["Ticket promedio", "L 18,320", "32 clientes activos"]],
+        metrics: "sales-invoices",
         columns: ["Documento", "Cliente", "CAI / Correlativo", "Fecha", "Total", "Estado", "Acciones"], statusIndex: 5,
         rows: [["FAC-2026-0891", "Confecciones Atlas", "000-001-01-0000891", "14 ago 2026", "L 24,600", "Pagada"], ["FAC-2026-0890", "Uniformes Rivera", "000-001-01-0000890", "14 ago 2026", "L 31,840", "Pendiente"], ["FAC-2026-0889", "Taller San Jose", "000-001-01-0000889", "12 ago 2026", "L 18,425", "Pagada"]],
         fields: [["Documento", "text", "FAC-2026-0892"], ["Cliente", "text", "Cliente"], ["CAI / Correlativo", "text", "000-001-01-0000892"], ["Fecha", "date", ""], ["Total", "number", "Monto"], ["Estado", "select", ["Borrador", "Pendiente", "Pagada", "Anulada"]]],
@@ -106,7 +106,7 @@ window.TEXTILES_MODULES = {
       cobranza: {
         label: "Cuentas por Cobrar", description: "Cartera, antiguedad de saldos, pagos y limites de credito.",
         action: "+ Registrar Cobro", search: "Buscar cliente, factura o vencimiento...",
-        metrics: [["Cartera total", "L 98,400", "14 facturas abiertas"], ["Por vencer", "L 52,310", "Proximos 7 dias"], ["Vencido", "L 18,940", "3 clientes"], ["Dias de cartera", "24", "Objetivo: 21 dias"]],
+        metrics: "sales-receivables",
         columns: ["Factura", "Cliente", "Vencimiento", "Original", "Saldo", "Antiguedad", "Estado", "Acciones"], statusIndex: 6,
         rows: [["FAC-2026-0890", "Uniformes Rivera", "28 ago 2026", "L 31,840", "L 31,840", "0-15 dias", "Por vencer"], ["FAC-2026-0884", "Hotel Mirador", "18 ago 2026", "L 39,900", "L 19,950", "16-30 dias", "Parcial"], ["FAC-2026-0869", "Moda Centro", "08 ago 2026", "L 18,940", "L 18,940", "31-60 dias", "Vencido"]],
         fields: [["Factura", "text", "FAC-2026-0890"], ["Cliente", "text", "Cliente"], ["Vencimiento", "date", ""], ["Original", "number", "Monto original"], ["Saldo", "number", "Saldo"], ["Antiguedad", "select", ["0-15 dias", "16-30 dias", "31-60 dias", "+60 dias"]], ["Estado", "select", ["Por vencer", "Parcial", "Pagado", "Vencido"]]],
