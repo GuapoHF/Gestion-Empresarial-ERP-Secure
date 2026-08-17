@@ -127,7 +127,7 @@ window.TEXTILES_MODULES = {
       productos: {
         label: "Productos", description: "Catalogo maestro de telas, servicios y variantes comerciales.",
         action: "+ Nuevo Producto", search: "Buscar codigo, tela, color o categoria...",
-        metrics: [["Productos activos", "148", "32 con variantes"], ["Existencia total", "18,420 m", "En 3 almacenes"], ["Bajo minimo", "7", "Requieren compra"], ["Valor inventario", "L 286,740", "Costo promedio"]],
+        metrics: "inventory-products",
         columns: ["Codigo", "Producto", "Categoria", "Color", "Unidad", "Existencia", "Estado", "Acciones"], statusIndex: 6,
         rows: [["TELA-00142", "Manta cruda 1.50 m", "Algodon", "Crudo natural", "Metro", "500", "Activo"], ["TELA-00098", "Lino premium", "Lino", "Azul marino", "Metro", "240", "Activo"], ["TELA-00215", "Popelina floral", "Poliester", "Estampado", "Metro", "180", "Bajo minimo"], ["TELA-00176", "Mezclilla indigo 12 oz", "Mezclilla", "Azul indigo", "Metro", "420", "Activo"]],
         fields: [["Codigo", "text", "TELA-00216"], ["Producto", "text", "Nombre comercial"], ["Categoria", "text", "Categoria de tela"], ["Color", "text", "Color"], ["Unidad", "select", ["Metro", "Yarda", "Rollo", "Pieza", "Kilogramo"]], ["Existencia", "number", "Cantidad inicial"], ["Estado", "select", ["Activo", "Bajo minimo", "Inactivo"]]],
@@ -174,7 +174,7 @@ window.TEXTILES_MODULES = {
       movimientos: {
         label: "Movimientos", description: "Asientos automaticos provenientes de compras, ventas e inventarios.",
         action: "+ Nuevo Movimiento", search: "Buscar asiento, concepto o cuenta...",
-        metrics: [["Saldo en bancos", "L 782,410", "Conciliado al 13 de agosto"], ["Cuentas por cobrar", "L 98,400", "14 facturas abiertas"], ["Cuentas por pagar", "L 143,650", "8 ordenes pendientes"], ["Cierre de agosto", "72%", "7 tareas completadas"]],
+        metrics: "accounting-summary",
         columns: ["Fecha", "Asiento", "Concepto", "Cuenta", "Debito", "Credito", "Estado", "Acciones"], statusIndex: 6,
         rows: [["14 ago 2026", "ASI-2026-0841", "Venta FAC-2026-0891", "Caja y bancos", "L 24,600", "-", "Registrado"], ["14 ago 2026", "ASI-2026-0840", "Compra OC-2026-039", "Inventario telas", "L 53,900", "-", "Registrado"], ["13 ago 2026", "ASI-2026-0839", "Pago proveedor Hilaturas", "Proveedores", "-", "L 41,250", "Conciliado"]],
         fields: [["Fecha", "date", ""], ["Asiento", "text", "ASI-2026-0842"], ["Concepto", "text", "Descripcion"], ["Cuenta", "text", "Cuenta contable"], ["Debito", "number", "0.00"], ["Credito", "number", "0.00"], ["Estado", "select", ["Registrado", "Conciliado", "Pendiente"]]],
@@ -202,7 +202,7 @@ window.TEXTILES_MODULES = {
     views: {
       analisis: {
         label: "Analisis", description: "Costo promedio, precio sugerido y margen por tipo de tela.", action: "Recalcular Costos", search: "Buscar tela, categoria o color...", specialAction: "recalculate",
-        metrics: [["Costo de inventario", "L 286,740", "1,840 rollos y cortes"], ["Margen promedio", "31.4%", "+1.8% contra julio"], ["Telas bajo margen", "3", "Requieren ajuste de precio"], ["Rotacion promedio", "38 dias", "Objetivo: 35 dias"]],
+        metrics: "cost-analysis",
         columns: ["ID Tela", "Descripcion", "Costo/u", "Precio/u", "Utilidad/u", "Margen", "Rotacion", "Acciones"], statusIndex: -1,
         rows: [["TELA-00142", "Manta cruda 1.50 m", "L 25.50", "L 37.00", "L 11.50", "31.08%", "27 dias"], ["TELA-00098", "Lino premium azul", "L 39.00", "L 55.00", "L 16.00", "29.09%", "41 dias"], ["TELA-00215", "Popelina floral", "L 23.00", "L 31.00", "L 8.00", "25.81%", "52 dias"]],
       },
