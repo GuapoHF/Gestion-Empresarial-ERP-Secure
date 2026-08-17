@@ -69,16 +69,12 @@ async function syncDataset() {
     } else {
       await window.gestionUserDb.saveDataset(currentKey, currentViewKey, rows);
     }
-    if (["compras", "ventas"].includes(currentKey) && typeof currentView.metrics === "string") {
-      const metricViews = {
-        compras: ["proveedores", "ordenes", "recepciones", "comparativo", "pagos"],
-        ventas: ["clientes", "pedidos", "facturas", "cobranza"],
-      };
-      const relatedViews = metricViews[currentKey].filter((viewKey) => viewKey !== currentViewKey);
-      await Promise.all(relatedViews.map(async (viewKey) => {
+    if (typeof currentView.metrics === "string") {
+      const relatedDatasets = metricDependencies(currentView.metrics).filter(([moduleKey, viewKey]) => moduleKey !== currentKey || viewKey !== currentViewKey);
+      await Promise.all(relatedDatasets.map(async ([moduleKey, viewKey]) => {
         try {
-          const related = await window.gestionUserDb.getDataset(currentKey, viewKey);
-          if (related.initialized) localStorage.setItem(rowsStorageKey(currentKey, viewKey), JSON.stringify(related.rows));
+          const related = await window.gestionUserDb.getDataset(moduleKey, viewKey);
+          if (related.initialized) localStorage.setItem(rowsStorageKey(moduleKey, viewKey), JSON.stringify(related.rows));
         } catch (error) {
           // Each related section keeps using its local copy when it cannot be synchronized.
         }
@@ -130,6 +126,84 @@ function moduleRows(moduleKey, viewKey) {
   if (currentKey === moduleKey && viewKey === currentViewKey) return rows;
   const viewDefinition = modules[moduleKey]?.views[viewKey];
   return loadRows(moduleKey, viewKey, viewDefinition?.rows || []);
+}
+
+function metricDependencies(metricType) {
+  const dependencies = {
+    "purchase-suppliers": [["compras", "proveedores"], ["compras", "comparativo"]],
+    "purchase-orders": [["compras", "proveedores"], ["compras", "ordenes"], ["compras", "recepciones"]],
+    "purchase-payables": [["compras", "pagos"]],
+    "sales-clients": [["ventas", "clientes"], ["ventas", "cobranza"]],
+    "sales-invoices": [["ventas", "clientes"], ["ventas", "pedidos"], ["ventas", "facturas"]],
+    "sales-receivables": [["ventas", "cobranza"]],
+    "inventory-products": [["inventarios", "productos"], ["inventarios", "almacenes"], ["costos", "analisis"]],
+    "accounting-summary": [["contabilidad", "bancos"], ["contabilidad", "cierres"], ["ventas", "cobranza"], ["compras", "pagos"]],
+    "cost-analysis": [["costos", "analisis"], ["costos", "margenes"], ["inventarios", "productos"]],
+  };
+  return dependencies[metricType] || [];
+}
+
+function currency(value, decimals = 0) {
+  return `${moduleSessionUser.currencySymbol || "L"} ${Number(value || 0).toLocaleString(moduleSessionUser.locale || "es-HN", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
+}
+
+function totalAt(data, index) {
+  return data.reduce((sum, row) => sum + numericValue(row[index]), 0);
+}
+
+function operationalMetrics(metricType) {
+  if (metricType === "inventory-products") {
+    const products = moduleRows("inventarios", "productos");
+    const warehouses = moduleRows("inventarios", "almacenes").filter((row) => /activo/i.test(row[6]));
+    const costs = new Map(moduleRows("costos", "analisis").map((row) => [row[0], numericValue(row[2])]));
+    const active = products.filter((row) => /activo/i.test(row[6]));
+    const lowStock = products.filter((row) => /bajo minimo/i.test(row[6]));
+    const stock = totalAt(products.filter((row) => !/inactivo/i.test(row[6])), 5);
+    const inventoryValue = products.reduce((sum, row) => sum + numericValue(row[5]) * (costs.get(row[0]) || 0), 0);
+    const categories = new Set(active.map((row) => row[2]).filter(Boolean)).size;
+    return [
+      ["Productos activos", String(active.length), `${categories} categorias activas`],
+      ["Existencia total", `${stock.toLocaleString(moduleSessionUser.locale || "es-HN")} unidades`, `En ${warehouses.length} almacenes activos`],
+      ["Bajo minimo", String(lowStock.length), "Requieren compra"],
+      ["Valor inventario", currency(inventoryValue), `${costs.size} productos con costo registrado`],
+    ];
+  }
+
+  if (metricType === "accounting-summary") {
+    const bankRows = moduleRows("contabilidad", "bancos");
+    const receivables = moduleRows("ventas", "cobranza").filter((row) => !/pagado/i.test(row[6]));
+    const payables = moduleRows("compras", "pagos").filter((row) => !/pagado/i.test(row[6]));
+    const closingTasks = moduleRows("contabilidad", "cierres");
+    const completed = closingTasks.filter((row) => /completado/i.test(row[5]));
+    const reconciled = bankRows.filter((row) => /conciliado/i.test(row[6]));
+    const balance = totalAt(bankRows, 5) - totalAt(bankRows, 4);
+    return [
+      ["Saldo en bancos", currency(balance), `${reconciled.length} de ${bankRows.length} movimientos conciliados`],
+      ["Cuentas por cobrar", currency(totalAt(receivables, 4)), `${receivables.length} facturas abiertas`],
+      ["Cuentas por pagar", currency(totalAt(payables, 4)), `${payables.length} documentos pendientes`],
+      ["Cierre del periodo", `${closingTasks.length ? Math.round((completed.length / closingTasks.length) * 100) : 0}%`, `${completed.length} de ${closingTasks.length} tareas completadas`],
+    ];
+  }
+
+  if (metricType === "cost-analysis") {
+    const analyses = moduleRows("costos", "analisis");
+    const products = moduleRows("inventarios", "productos");
+    const minimumMargins = moduleRows("costos", "margenes").map((row) => numericValue(row[2])).filter((value) => value > 0);
+    const minimumMargin = minimumMargins.length ? Math.max(...minimumMargins) : 30;
+    const productStock = new Map(products.map((row) => [row[0], numericValue(row[5])]));
+    const inventoryCost = analyses.reduce((sum, row) => sum + numericValue(row[2]) * (productStock.get(row[0]) || 0), 0);
+    const margins = analyses.map((row) => numericValue(row[5]));
+    const rotations = analyses.map((row) => numericValue(row[6])).filter((value) => value > 0);
+    const average = (values) => values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+    const lowMargin = margins.filter((margin) => margin < minimumMargin).length;
+    return [
+      ["Costo de inventario", currency(inventoryCost), `${analyses.length} productos costeados`],
+      ["Margen promedio", `${average(margins).toFixed(1)}%`, `Calculado sobre ${margins.length} productos`],
+      ["Telas bajo margen", String(lowMargin), `Margen minimo de referencia: ${minimumMargin}%`],
+      ["Rotacion promedio", `${Math.round(average(rotations))} dias`, `${rotations.length} productos analizados`],
+    ];
+  }
+  return [];
 }
 
 function salesMetrics(metricType) {
@@ -214,7 +288,7 @@ function purchaseMetrics(metricType) {
 }
 
 function renderMetrics() {
-  const dynamicMetrics = currentKey === "ventas" ? salesMetrics : purchaseMetrics;
+  const dynamicMetrics = currentKey === "ventas" ? salesMetrics : currentKey === "compras" ? purchaseMetrics : operationalMetrics;
   const metrics = typeof currentView.metrics === "string" ? dynamicMetrics(currentView.metrics) : (currentView.metrics || []);
   metricsContainer.innerHTML = metrics.map(([label, value, detail]) =>
     `<article><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong><small>${escapeHtml(detail)}</small></article>`
@@ -272,7 +346,7 @@ function refreshDataView() {
 }
 
 function handleStoredRowsChange(event) {
-  if (!event.key?.startsWith(`textiles-gh-${currentKey}-`) || event.newValue === null) return;
+  if (!event.key?.startsWith("textiles-gh-") || event.newValue === null) return;
 
   if (event.key === storageKey) {
     try {
@@ -287,7 +361,7 @@ function handleStoredRowsChange(event) {
 
   // Dynamic indicators combine several sections, so a change made in another
   // tab must also refresh the cards shown in the current section.
-  if (["compras", "ventas"].includes(currentKey) && typeof currentView.metrics === "string") renderMetrics();
+  if (typeof currentView.metrics === "string" && metricDependencies(currentView.metrics).some(([moduleKey]) => event.key.startsWith(`textiles-gh-${moduleKey}-`))) renderMetrics();
 }
 
 function renderReports() {
