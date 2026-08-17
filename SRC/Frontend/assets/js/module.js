@@ -69,12 +69,16 @@ async function syncDataset() {
     } else {
       await window.gestionUserDb.saveDataset(currentKey, currentViewKey, rows);
     }
-    if (currentKey === "compras" && typeof currentView.metrics === "string") {
-      const relatedViews = ["proveedores", "ordenes", "recepciones", "comparativo", "pagos"].filter((viewKey) => viewKey !== currentViewKey);
+    if (["compras", "ventas"].includes(currentKey) && typeof currentView.metrics === "string") {
+      const metricViews = {
+        compras: ["proveedores", "ordenes", "recepciones", "comparativo", "pagos"],
+        ventas: ["clientes", "pedidos", "facturas", "cobranza"],
+      };
+      const relatedViews = metricViews[currentKey].filter((viewKey) => viewKey !== currentViewKey);
       await Promise.all(relatedViews.map(async (viewKey) => {
         try {
-          const related = await window.gestionUserDb.getDataset("compras", viewKey);
-          if (related.initialized) localStorage.setItem(rowsStorageKey("compras", viewKey), JSON.stringify(related.rows));
+          const related = await window.gestionUserDb.getDataset(currentKey, viewKey);
+          if (related.initialized) localStorage.setItem(rowsStorageKey(currentKey, viewKey), JSON.stringify(related.rows));
         } catch (error) {
           // Each related section keeps using its local copy when it cannot be synchronized.
         }
@@ -122,6 +126,52 @@ function purchaseRows(viewKey) {
   return loadRows("compras", viewKey, viewDefinition?.rows || []);
 }
 
+function moduleRows(moduleKey, viewKey) {
+  if (currentKey === moduleKey && viewKey === currentViewKey) return rows;
+  const viewDefinition = modules[moduleKey]?.views[viewKey];
+  return loadRows(moduleKey, viewKey, viewDefinition?.rows || []);
+}
+
+function salesMetrics(metricType) {
+  const clients = moduleRows("ventas", "clientes");
+  const orders = moduleRows("ventas", "pedidos");
+  const invoices = moduleRows("ventas", "facturas");
+  const receivables = moduleRows("ventas", "cobranza");
+  const activeClients = clients.filter((row) => /activo/i.test(row[6]));
+  const openInvoices = invoices.filter((row) => !/pagada|anulada/i.test(row[5]));
+  const pendingOrders = orders.filter((row) => !/entregado|cancelado/i.test(row[5]));
+  const openReceivables = receivables.filter((row) => !/pagado/i.test(row[6]));
+  const dueSoon = openReceivables.filter((row) => /por vencer|parcial/i.test(row[6]));
+  const overdue = openReceivables.filter((row) => /vencido/i.test(row[6]));
+  const total = (data, index) => data.reduce((sum, row) => sum + numericValue(row[index]), 0);
+  const currency = (value) => `${moduleSessionUser.currencySymbol || "L"} ${Math.round(value).toLocaleString(moduleSessionUser.locale || "es-HN")}`;
+  const invoiceSales = total(invoices.filter((row) => !/anulada/i.test(row[5])), 4);
+  const authorizedCredit = total(clients, 4);
+  const usedCredit = total(clients, 5);
+  const portfolio = total(openReceivables, 4);
+  const healthyPortfolio = total(openReceivables.filter((row) => !/vencido/i.test(row[6])), 4);
+
+  if (metricType === "sales-clients") return [
+    ["Clientes activos", String(activeClients.length), `${clients.length} clientes registrados`],
+    ["Credito autorizado", currency(authorizedCredit), `${authorizedCredit ? Math.round((usedCredit / authorizedCredit) * 100) : 0}% utilizado`],
+    ["Cartera al dia", `${portfolio ? Math.round((healthyPortfolio / portfolio) * 100) : 100}%`, `${overdue.length} documentos vencidos`],
+    ["Retencion", `${clients.length ? Math.round((activeClients.length / clients.length) * 100) : 0}%`, "Clientes activos del total registrado"],
+  ];
+  if (metricType === "sales-invoices") return [
+    ["Ventas registradas", currency(invoiceSales), `${invoices.length} facturas emitidas`],
+    ["Facturas abiertas", String(openInvoices.length), `${currency(total(openInvoices, 4))} por cobrar`],
+    ["Pedidos por facturar", String(pendingOrders.length), `${currency(total(pendingOrders, 4))} en pedidos abiertos`],
+    ["Ticket promedio", currency(invoices.length ? invoiceSales / invoices.length : 0), `${activeClients.length} clientes activos`],
+  ];
+  if (metricType === "sales-receivables") return [
+    ["Cartera total", currency(portfolio), `${openReceivables.length} facturas abiertas`],
+    ["Por vencer", currency(total(dueSoon, 4)), `${dueSoon.length} documentos vigentes o parciales`],
+    ["Vencido", currency(total(overdue, 4)), `${new Set(overdue.map((row) => row[1])).size} clientes`],
+    ["Saldo promedio", currency(openReceivables.length ? portfolio / openReceivables.length : 0), "Por factura abierta"],
+  ];
+  return [];
+}
+
 function purchaseMetrics(metricType) {
   const suppliers = purchaseRows("proveedores");
   const orders = purchaseRows("ordenes");
@@ -164,7 +214,8 @@ function purchaseMetrics(metricType) {
 }
 
 function renderMetrics() {
-  const metrics = typeof currentView.metrics === "string" ? purchaseMetrics(currentView.metrics) : (currentView.metrics || []);
+  const dynamicMetrics = currentKey === "ventas" ? salesMetrics : purchaseMetrics;
+  const metrics = typeof currentView.metrics === "string" ? dynamicMetrics(currentView.metrics) : (currentView.metrics || []);
   metricsContainer.innerHTML = metrics.map(([label, value, detail]) =>
     `<article><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong><small>${escapeHtml(detail)}</small></article>`
   ).join("");
@@ -234,9 +285,9 @@ function handleStoredRowsChange(event) {
     return;
   }
 
-  // Purchase indicators combine several sections, so a change made in another
+  // Dynamic indicators combine several sections, so a change made in another
   // tab must also refresh the cards shown in the current section.
-  if (currentKey === "compras" && typeof currentView.metrics === "string") renderMetrics();
+  if (["compras", "ventas"].includes(currentKey) && typeof currentView.metrics === "string") renderMetrics();
 }
 
 function renderReports() {
