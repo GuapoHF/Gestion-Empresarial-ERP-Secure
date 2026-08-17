@@ -28,7 +28,7 @@
           <div class="field login-password">
             <label for="new-password">Nueva contrasena</label>
             <div class="password-control">
-              <input id="new-password" name="password" type="password" autocomplete="new-password" minlength="8" required />
+              <input id="new-password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="72" pattern="(?=.*[A-Za-z])(?=.*\d).{8,}" title="Usa entre 8 y 72 caracteres, con al menos una letra y un numero." required />
               <button class="icon-button" type="button" id="toggle-password" aria-label="Mostrar contrasena">
                 <img src="./assets/icons/login-eye.svg" alt="" />
               </button>
@@ -46,6 +46,7 @@
         </footer>
       </section>
     </main>
+    <script src="./assets/js/validation.js"></script>
     <script src="./assets/js/user-db.js"></script>
     <script src="./assets/js/auth.js"></script>
   </body>

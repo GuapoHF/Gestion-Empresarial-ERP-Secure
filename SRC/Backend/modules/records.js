@@ -1,4 +1,5 @@
 const pool = require("../config/connection");
+const { requireModuleAccess } = require("../config/permissions");
 
 const KEY_PATTERN = /^[a-z0-9_-]{2,40}$/;
 
@@ -9,8 +10,14 @@ function validateKey(value, label) {
 }
 
 function resolveCompanyId(user, requestedCompanyId) {
-  if (user.isGlobalAdmin && requestedCompanyId) return Number(requestedCompanyId);
-  return Number(user.companyId);
+  const companyId = user.isGlobalAdmin && requestedCompanyId ? Number(requestedCompanyId) : Number(user.companyId);
+  if (!Number.isInteger(companyId) || companyId <= 0) throw new Error("La empresa seleccionada no es valida.");
+  return companyId;
+}
+
+async function assertActiveCompany(companyId) {
+  const [companies] = await pool.query("SELECT id FROM companies WHERE id = ? AND active = 1 LIMIT 1", [companyId]);
+  if (!companies.length) throw new Error("La empresa seleccionada no esta disponible.");
 }
 
 async function ensureRecordsTable() {
@@ -30,8 +37,10 @@ async function ensureRecordsTable() {
 async function getDataset(user, query) {
   await ensureRecordsTable();
   const moduleKey = validateKey(query.module, "El modulo");
+  requireModuleAccess(user, moduleKey);
   const viewKey = validateKey(query.view, "La vista");
   const companyId = resolveCompanyId(user, query.companyId);
+  await assertActiveCompany(companyId);
   const [rows] = await pool.query(
     "SELECT rows_json, updated_at FROM business_datasets WHERE company_id = ? AND module_key = ? AND view_key = ? LIMIT 1",
     [companyId, moduleKey, viewKey]
@@ -45,8 +54,10 @@ async function getDataset(user, query) {
 async function saveDataset(user, body) {
   await ensureRecordsTable();
   const moduleKey = validateKey(body.moduleKey, "El modulo");
+  requireModuleAccess(user, moduleKey);
   const viewKey = validateKey(body.viewKey, "La vista");
   const companyId = resolveCompanyId(user, body.companyId);
+  await assertActiveCompany(companyId);
   if (!Array.isArray(body.rows) || body.rows.length > 2000) throw new Error("El conjunto de registros no es valido.");
   const rows = body.rows.map((row) => {
     if (!Array.isArray(row) || row.length > 30) throw new Error("Uno de los registros no tiene el formato esperado.");

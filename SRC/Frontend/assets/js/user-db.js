@@ -96,6 +96,12 @@ async function resetPassword(token, password) {
   return requestJson("/auth/reset", { method: "POST", body: { token, password }, auth: false });
 }
 
+async function deleteOwnAccount(password, confirmation) {
+  const result = await requestJson("/auth/account", { method: "DELETE", body: { password, confirmation } });
+  clearSession();
+  return result;
+}
+
 async function getRegistrations(filters = {}) {
   const query = new URLSearchParams();
   if (filters.status) query.set("status", filters.status);
@@ -111,6 +117,33 @@ async function approveRegistration(id) {
 
 async function rejectRegistration(id, reason = "") {
   return requestJson("/admin/registrations/reject", { method: "POST", body: { id, reason } });
+}
+
+async function listEmployees(filters = {}) {
+  const query = new URLSearchParams();
+  if (filters.companyId) query.set("companyId", filters.companyId);
+  if (filters.status) query.set("status", filters.status);
+  const data = await requestJson(`/employees?${query}`);
+  return data.employees || [];
+}
+
+async function getEmployee(id) {
+  const data = await requestJson(`/employees/${encodeURIComponent(id)}`);
+  return data.employee;
+}
+
+async function createEmployee(employee) {
+  const data = await requestJson("/employees", { method: "POST", body: employee });
+  return data.employee;
+}
+
+async function updateEmployee(id, employee) {
+  const data = await requestJson(`/employees/${encodeURIComponent(id)}`, { method: "PUT", body: employee });
+  return data.employee;
+}
+
+async function deleteEmployee(id, confirmation) {
+  return requestJson(`/employees/${encodeURIComponent(id)}`, { method: "DELETE", body: { confirmation } });
 }
 
 async function getDataset(moduleKey, viewKey, companyId) {
@@ -132,18 +165,24 @@ async function getAccountingReport(type, period, companyId) {
 
 window.gestionUserDb = {
   approveRegistration,
+  createEmployee,
   createUser,
+  deleteEmployee,
+  deleteOwnAccount,
   getAccountingReport,
   getAuthToken,
   getCurrentUser,
   getDataset,
+  getEmployee,
   getRegistrations,
   listCompanies,
+  listEmployees,
   loginUser,
   logoutUser,
   recoverPassword,
   rejectRegistration,
   resetPassword,
   saveDataset,
+  updateEmployee,
   validateSession,
 };

@@ -1,4 +1,5 @@
 const pool = require("../config/connection");
+const { requireModuleAccess } = require("../config/permissions");
 
 const REPORT_TYPES = ["income-statement", "balance-sheet", "trial-balance", "payroll-catalog", "sales-profit", "purchase-invoice"];
 
@@ -276,6 +277,7 @@ function closing(row) { return number(row.opening_balance) + number(row.debit) -
 function sum(rows, type) { return rows.filter((row) => row.account_type === type).reduce((total, row) => total + Math.abs(closing(row)), 0); }
 
 async function getAccountingReport(user, query) {
+  requireModuleAccess(user, "contabilidad");
   const type = String(query.type || "income-statement");
   if (!REPORT_TYPES.includes(type)) throw new Error("El tipo de reporte contable no es valido.");
   const period = /^\d{4}-(0[1-9]|1[0-2])$/.test(query.period || "") ? query.period : "2026-01";

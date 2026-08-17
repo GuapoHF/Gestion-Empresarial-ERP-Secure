@@ -91,6 +91,34 @@ CREATE TABLE IF NOT EXISTS business_datasets (
   UNIQUE KEY uq_business_dataset (company_id, module_key, view_key)
 );
 
+CREATE TABLE IF NOT EXISTS employees (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  company_id INT NOT NULL,
+  seed_key VARCHAR(80),
+  first_name VARCHAR(120) NOT NULL,
+  last_name VARCHAR(120) NOT NULL,
+  second_last_name VARCHAR(120),
+  email VARCHAR(180) NOT NULL,
+  birth_date DATE,
+  birth_place VARCHAR(120),
+  gender VARCHAR(30) NOT NULL DEFAULT 'No especificado',
+  identity_number VARCHAR(40),
+  tax_number VARCHAR(40),
+  social_security_number VARCHAR(40),
+  position VARCHAR(120) NOT NULL,
+  branch VARCHAR(120) NOT NULL,
+  system_role VARCHAR(40) NOT NULL DEFAULT 'Empleado',
+  status VARCHAR(30) NOT NULL DEFAULT 'Activo',
+  created_by INT,
+  deleted_by INT,
+  deleted_at DATETIME,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_employee_email_company (company_id, email),
+  UNIQUE KEY uq_employee_seed_company (company_id, seed_key),
+  INDEX idx_employee_company_status (company_id, status)
+);
+
 CREATE TABLE IF NOT EXISTS accounting_balances (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   company_id INT NOT NULL,

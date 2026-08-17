@@ -9,6 +9,7 @@ const passwordInput = document.querySelector("#password");
 const togglePasswordButton = document.querySelector("#toggle-password");
 const signupForm = document.querySelector("#signup-form");
 const registerAlert = document.querySelector("#register-alert");
+const { emailError, normalizeEmail, passwordError, setFieldError } = window.gestionValidation;
 
 function normalizeUsernamePart(value) {
   return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
@@ -41,6 +42,13 @@ async function loadCompanies() {
 
 firstNameInput.addEventListener("input", updateGeneratedUsername);
 lastNameInput.addEventListener("input", updateGeneratedUsername);
+emailInput.addEventListener("blur", () => {
+  emailInput.value = normalizeEmail(emailInput.value);
+  setFieldError(emailInput, emailError(emailInput.value));
+});
+emailInput.addEventListener("input", () => setFieldError(emailInput, ""));
+passwordInput.addEventListener("blur", () => setFieldError(passwordInput, passwordError(passwordInput.value, usernameInput.value)));
+passwordInput.addEventListener("input", () => setFieldError(passwordInput, ""));
 togglePasswordButton.addEventListener("click", () => {
   const isHidden = passwordInput.type === "password";
   passwordInput.type = isHidden ? "text" : "password";
@@ -50,6 +58,15 @@ togglePasswordButton.addEventListener("click", () => {
 signupForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   registerAlert.hidden = true;
+  emailInput.value = normalizeEmail(emailInput.value);
+  const emailMessage = emailError(emailInput.value);
+  const passwordMessage = passwordError(passwordInput.value, usernameInput.value);
+  setFieldError(emailInput, emailMessage);
+  setFieldError(passwordInput, passwordMessage);
+  if (emailMessage || passwordMessage) {
+    (emailMessage ? emailInput : passwordInput).focus();
+    return;
+  }
   if (!signupForm.checkValidity()) {
     signupForm.reportValidity();
     return;

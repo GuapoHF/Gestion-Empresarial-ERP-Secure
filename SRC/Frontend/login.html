@@ -28,14 +28,14 @@
           <div class="field login-password">
             <label for="password">Contrasena</label>
             <div class="password-control">
-              <input id="password" name="password" type="password" value="12345678" autocomplete="current-password" required />
+              <input id="password" name="password" type="password" autocomplete="current-password" required />
               <button class="icon-button" type="button" id="toggle-password" aria-label="Mostrar contrasena">
                 <img src="./assets/icons/login-eye.svg" alt="" />
               </button>
             </div>
             <p class="field-alert" id="login-alert" hidden>
               <img src="./assets/icons/login-alert.svg" alt="" />
-              Contrasena incorrecta. Verifica e intenta de nuevo.
+              <span>Usuario o contrasena incorrectos. Verifica e intenta de nuevo.</span>
             </p>
             <a class="forgot-link" href="./recuperar.html">Olvide mi contrasena</a>
           </div>
@@ -48,6 +48,7 @@
       </section>
     </main>
 
+    <script src="./assets/js/validation.js"></script>
     <script src="./assets/js/user-db.js"></script>
     <script src="./assets/js/auth.js"></script>
   </body>

@@ -51,65 +51,69 @@
 
         <section class="content-area">
           <header class="page-title">
-            <h1>Registrar Nuevo Empleado</h1>
+              <h1 id="employee-form-title">Registrar Nuevo Empleado</h1>
             <p>Datos personales, documentos y asignacion laboral dentro de la empresa seleccionada.</p>
           </header>
 
-          <form class="employee-form" id="employee-form">
+          <form class="employee-form" id="employee-form" novalidate>
             <aside class="form-card photo-card">
-              <div class="photo-uploader">GH</div>
-              <button class="secondary-action" type="button">Subir Fotografia</button>
-              <p>Formatos JPG o PNG, maximo 2 MB.</p>
+              <div class="photo-uploader" id="employee-initials">NE</div>
+              <strong>Expediente laboral</strong>
+              <p id="employee-company-name">Empresa seleccionada</p>
             </aside>
 
             <section class="form-card">
               <h2>Informacion Personal</h2>
               <div class="admin-form-grid">
-                <div class="field"><label for="name">Nombres</label><input id="name" type="text" value="Mariana" /></div>
-                <div class="field"><label for="last-a">Apellido Paterno</label><input id="last-a" type="text" value="Lopez" /></div>
-                <div class="field"><label for="last-b">Apellido Materno</label><input id="last-b" type="text" value="Rivera" /></div>
-                <div class="field"><label for="birth">Fecha de Nacimiento</label><input id="birth" type="date" value="1994-05-18" /></div>
-                <div class="field"><label for="city">Lugar de Nacimiento</label><input id="city" type="text" value="Tegucigalpa" /></div>
+                <div class="field"><label for="name">Nombres</label><input id="name" name="firstName" type="text" autocomplete="given-name" minlength="2" maxlength="80" required /></div>
+                <div class="field"><label for="last-a">Apellido Paterno</label><input id="last-a" name="lastName" type="text" autocomplete="family-name" minlength="2" maxlength="80" required /></div>
+                <div class="field"><label for="last-b">Apellido Materno</label><input id="last-b" name="secondLastName" type="text" autocomplete="additional-name" maxlength="80" /></div>
+                <div class="field"><label for="employee-email">Correo Laboral</label><input id="employee-email" name="email" type="email" autocomplete="email" maxlength="180" placeholder="nombre@empresa.com" required /></div>
+                <div class="field"><label for="birth">Fecha de Nacimiento</label><input id="birth" name="birthDate" type="date" /></div>
+                <div class="field"><label for="city">Lugar de Nacimiento</label><input id="city" name="birthPlace" type="text" maxlength="120" /></div>
                 <div class="field">
                   <label for="gender">Sexo</label>
-                  <select id="gender"><option>Femenino</option><option>Masculino</option><option>No especificado</option></select>
+                  <select id="gender" name="gender"><option>Femenino</option><option>Masculino</option><option selected>No especificado</option></select>
                 </div>
+                <div class="field" id="employee-company-field" hidden><label for="employee-company">Empresa</label><select id="employee-company" name="companyId"></select></div>
               </div>
             </section>
 
             <section class="form-card employee-wide">
               <h2>Documentos Oficiales</h2>
               <div class="admin-form-grid">
-                <div class="field"><label for="curp">CURP / Identidad</label><input id="curp" type="text" value="0801199405123" /></div>
-                <div class="field"><label for="rfc">RFC</label><input id="rfc" type="text" value="LORM940518AB2" /></div>
-                <div class="field"><label for="imss">IMSS / Seguro</label><input id="imss" type="text" value="SS-2389174" /></div>
+                <div class="field"><label for="curp">CURP / Identidad</label><input id="curp" name="identityNumber" type="text" autocomplete="off" /></div>
+                <div class="field"><label for="rfc">RFC</label><input id="rfc" name="taxNumber" type="text" autocomplete="off" /></div>
+                <div class="field"><label for="imss">IMSS / Seguro</label><input id="imss" name="socialSecurityNumber" type="text" autocomplete="off" /></div>
               </div>
             </section>
 
             <section class="form-card employee-wide">
               <h2>Datos Laborales</h2>
               <div class="admin-form-grid">
-                <div class="field"><label for="position">Puesto</label><input id="position" type="text" value="Encargada de Inventario Textil" /></div>
+                <div class="field"><label for="position">Puesto</label><input id="position" name="position" type="text" maxlength="120" required /></div>
                 <div class="field">
                   <label for="branch">Sucursal</label>
-                  <select id="branch"><option>Bodega Central</option><option>Sucursal San Pedro</option><option>Sucursal La Ceiba</option></select>
+                  <select id="branch" name="branch"><option>Bodega Central</option><option>Sucursal Principal</option><option>Oficina Central</option><option>Sucursal San Pedro</option></select>
                 </div>
                 <div class="field">
-                  <label for="role">Rol del Sistema</label>
-                  <select id="role"><option>Inventarios</option><option>Ventas</option><option>Compras</option><option>Administrador</option></select>
+                  <label for="role">Area Operativa</label>
+                  <select id="role" name="systemRole"><option>Empleado</option><option>Inventarios</option><option>Ventas</option><option>Compras</option><option>Contabilidad</option></select>
                 </div>
               </div>
+              <p class="input-error" id="employee-form-error" role="alert" hidden></p>
               <div class="form-actions compact-actions">
                 <a class="secondary-action" href="./empleados.html">Cancelar</a>
-                <button class="submit-button save-record" type="submit">Guardar</button>
+                <button class="submit-button save-record" id="save-employee" type="submit">Guardar empleado</button>
               </div>
             </section>
           </form>
         </section>
       </section>
     </main>
-    <script src="./assets/js/empleado.js"></script>
+    <script src="./assets/js/validation.js"></script>
     <script src="./assets/js/user-db.js"></script>
     <script src="./assets/js/session.js"></script>
+    <script src="./assets/js/empleado.js"></script>
   </body>
 </html>

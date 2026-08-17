@@ -1,4 +1,12 @@
 const ADMIN_ROLE = "Administrador";
+const ROLE_MODULES = Object.freeze({
+  Administrador: ["compras", "ventas", "inventarios", "contabilidad", "costos", "reportes"],
+  Compras: ["compras"],
+  Ventas: ["ventas"],
+  Inventarios: ["inventarios"],
+  Contabilidad: ["contabilidad", "costos"],
+  Empleado: [],
+});
 
 function getSessionUser() {
   return window.gestionUserDb?.getCurrentUser() || null;
@@ -6,6 +14,49 @@ function getSessionUser() {
 
 function isAdminUser(user) {
   return user?.role === ADMIN_ROLE;
+}
+
+function canAccessModule(user, moduleKey) {
+  if (!moduleKey || moduleKey === "dashboard" || moduleKey === "ayuda") return true;
+  return (ROLE_MODULES[user?.role] || []).includes(moduleKey);
+}
+
+function moduleFromHref(href) {
+  if (!href) return "";
+  const url = new URL(href, window.location.href);
+  if (url.pathname.endsWith("/inventario.html")) return "inventarios";
+  if (url.pathname.endsWith("/reportes-contables.html")) return "contabilidad";
+  if (url.pathname.endsWith("/admin.html")) return "administrador";
+  return url.searchParams.get("modulo") || "";
+}
+
+function requestedPageModule() {
+  if (window.location.pathname.endsWith("/inventario.html")) return "inventarios";
+  if (window.location.pathname.endsWith("/reportes-contables.html")) return "contabilidad";
+  if (window.location.pathname.endsWith("/modulo.html")) return new URLSearchParams(window.location.search).get("modulo") || "compras";
+  return "";
+}
+
+function hideUnauthorizedModules(user) {
+  document.querySelectorAll("a[href]").forEach((link) => {
+    const moduleKey = link.dataset.module || moduleFromHref(link.getAttribute("href"));
+    if (moduleKey === "administrador" && !isAdminUser(user)) {
+      link.hidden = true;
+      return;
+    }
+    if (moduleKey && !canAccessModule(user, moduleKey)) link.hidden = true;
+  });
+}
+
+function showAccessNotice() {
+  if (!new URLSearchParams(window.location.search).has("acceso")) return;
+  const content = document.querySelector(".content-area");
+  if (!content || content.querySelector(".access-notice")) return;
+  const notice = document.createElement("p");
+  notice.className = "access-notice";
+  notice.setAttribute("role", "alert");
+  notice.textContent = "Tu perfil no tiene permiso para abrir ese modulo.";
+  content.insertBefore(notice, content.querySelector(".module-grid, .activity-panel"));
 }
 
 function getInitials(user) {
@@ -96,6 +147,15 @@ function applySessionUser(user) {
     if (avatar) avatar.textContent = getInitials(user);
     if (username) username.textContent = user.username;
     if (role) role.textContent = user.role;
+    if (!box.querySelector('.account-link')) {
+      const accountLink = document.createElement('a');
+      accountLink.className = 'account-link';
+      accountLink.href = './cuenta.html';
+      accountLink.title = 'Mi cuenta';
+      accountLink.setAttribute('aria-label', 'Abrir mi cuenta');
+      accountLink.innerHTML = '<img src="./assets/icons/admin.svg" alt="" />';
+      box.insertBefore(accountLink, box.querySelector('.logout'));
+    }
   });
   document.querySelectorAll('.brand').forEach((brand) => {
     if (!brand.dataset.staticBrand && user.company) brand.childNodes[0].nodeValue = `${user.company}`;
@@ -105,13 +165,6 @@ function applySessionUser(user) {
   });
   applyRegionalSettings(user);
 }
-function hideAdminAccess() {
-  document.querySelectorAll('a[href="./admin.html"], a[href="admin.html"], a[data-module="administrador"]').forEach((link) => {
-    const card = link.classList.contains('module-card') || link.classList.contains('admin-card') ? link : null;
-    (card || link).hidden = true;
-  });
-}
-
 function setupLogout() {
   document.querySelectorAll('.logout').forEach((link) => {
     link.addEventListener('click', async (event) => {
@@ -127,14 +180,13 @@ const currentUser = getSessionUser();
 if (!currentUser) {
   window.location.href = './login.html';
 } else if (document.body.dataset.adminOnly === 'true' && !isAdminUser(currentUser)) {
-  window.location.href = './dashboard.html';
+  window.location.replace('./dashboard.html?acceso=denegado');
+} else if (!canAccessModule(currentUser, requestedPageModule())) {
+  window.location.replace('./dashboard.html?acceso=denegado');
 } else {
   applySessionUser(currentUser);
-
-  if (!isAdminUser(currentUser)) {
-    hideAdminAccess();
-  }
-
+  hideUnauthorizedModules(currentUser);
+  showAccessNotice();
   setupLogout();
   window.gestionUserDb.validateSession().then((validatedUser) => {
     if (!validatedUser) {
@@ -142,9 +194,14 @@ if (!currentUser) {
       return;
     }
     if (document.body.dataset.adminOnly === 'true' && !isAdminUser(validatedUser)) {
-      window.location.href = './dashboard.html';
+      window.location.replace('./dashboard.html?acceso=denegado');
+      return;
+    }
+    if (!canAccessModule(validatedUser, requestedPageModule())) {
+      window.location.replace('./dashboard.html?acceso=denegado');
       return;
     }
     applySessionUser(validatedUser);
+    hideUnauthorizedModules(validatedUser);
   });
 }

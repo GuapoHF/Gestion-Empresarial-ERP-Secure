@@ -52,16 +52,16 @@
           <header class="page-title admin-title">
             <div>
               <h1>Gestion de Empleados</h1>
-              <p>Administra el personal, puestos y accesos dentro de la empresa seleccionada.</p>
+              <p>Administra los expedientes, puestos y areas del personal de la empresa seleccionada.</p>
             </div>
             <a class="primary-action" href="./empleado.html">+ Nuevo Empleado</a>
           </header>
 
           <section class="employee-summary" aria-label="Resumen de empleados">
-            <div><span>Total empleados</span><strong>24</strong></div>
-            <div><span>Inventarios</span><strong>8</strong></div>
-            <div><span>Ventas</span><strong>9</strong></div>
-            <div><span>Administracion</span><strong>7</strong></div>
+            <div><span>Total empleados</span><strong id="employee-total">0</strong></div>
+            <div><span>Inventarios</span><strong id="employee-inventory">0</strong></div>
+            <div><span>Ventas</span><strong id="employee-sales">0</strong></div>
+            <div><span>Contabilidad</span><strong id="employee-accounting">0</strong></div>
           </section>
 
           <section class="employee-panel">
@@ -70,37 +70,37 @@
                 <img src="./assets/icons/inventory-search.svg" alt="" />
                 <input id="employee-search" type="search" placeholder="Buscar por nombre, puesto o rol..." />
               </label>
-              <button class="filter-button" type="button"><img src="./assets/icons/inventory-filter.svg" alt="" />Filtrar</button>
+              <label class="employee-filter" id="employee-company-filter" hidden>
+                <span>Empresa</span>
+                <select id="employee-company"></select>
+              </label>
+              <label class="employee-filter">
+                <span>Estatus</span>
+                <select id="employee-status"><option value="">Activos e inactivos</option><option value="Activo">Activos</option><option value="Inactivo">Inactivos</option></select>
+              </label>
             </div>
-            <div class="employee-table">
-              <div class="employee-row head"><span>Empleado</span><span>Puesto</span><span>Sucursal</span><span>Rol</span><span>Acciones</span></div>
-              <div class="employee-row">
-                <div class="employee-name"><b>ML</b><strong>Mariana Lopez Rivera</strong><span>mlopez</span></div>
-                <span>Encargada de Inventario Textil</span><span>Bodega Central</span><b class="status complete">Inventarios</b>
-                <span class="row-actions"><a href="./empleado.html"><img src="./assets/icons/inventory-edit.svg" alt="Editar" /></a></span>
-              </div>
-              <div class="employee-row">
-                <div class="employee-name"><b>CM</b><strong>Carlos Mejia</strong><span>cmejia</span></div>
-                <span>Asesor de Ventas de Telas</span><span>Sucursal San Pedro</span><b class="status complete">Ventas</b>
-                <span class="row-actions"><a href="./empleado.html"><img src="./assets/icons/inventory-edit.svg" alt="Editar" /></a></span>
-              </div>
-              <div class="employee-row">
-                <div class="employee-name"><b>AR</b><strong>Ana Ruiz</strong><span>aruiz</span></div>
-                <span>Contadora General</span><span>Oficina Central</span><b class="status processing">Contabilidad</b>
-                <span class="row-actions"><a href="./empleado.html"><img src="./assets/icons/inventory-edit.svg" alt="Editar" /></a></span>
-              </div>
-              <div class="employee-row">
-                <div class="employee-name"><b>GH</b><strong>Gabriel Hernandez</strong><span>gabrielh</span></div>
-                <span>Administrador del Sistema</span><span>Oficina Central</span><b class="status complete">Administrador</b>
-                <span class="row-actions"><a href="./empleado.html"><img src="./assets/icons/inventory-edit.svg" alt="Editar" /></a></span>
-              </div>
+            <div class="employee-table" id="employee-table" aria-live="polite">
+              <div class="employee-row head"><span>Empleado</span><span>Puesto</span><span>Sucursal</span><span>Area</span><span>Acciones</span></div>
+              <div class="employee-empty" id="employee-loading">Cargando empleados...</div>
             </div>
+            <p class="module-toast" id="employee-message" role="status" hidden></p>
           </section>
         </section>
       </section>
     </main>
-    <script src="./assets/js/empleados.js"></script>
+
+    <dialog class="confirm-dialog" id="delete-employee-dialog" aria-labelledby="delete-employee-title">
+      <form method="dialog" class="confirm-dialog-card" id="delete-employee-form">
+        <header><img src="./assets/icons/inventory-delete.svg" alt="" /><div><h2 id="delete-employee-title">Eliminar empleado</h2><p id="delete-employee-description">Esta accion retirara el expediente del listado activo.</p></div></header>
+        <p class="confirm-dialog-note">La cuenta de acceso, si existe, se administra por separado desde solicitudes y usuarios.</p>
+        <div class="field"><label for="delete-employee-confirmation">Escribe <strong>ELIMINAR</strong> para confirmar</label><input id="delete-employee-confirmation" autocomplete="off" required /></div>
+        <p class="input-error" id="delete-employee-error" role="alert" hidden></p>
+        <div class="confirm-dialog-actions"><button class="secondary-action" value="cancel" type="button" id="cancel-delete-employee">Cancelar</button><button class="danger-action" type="submit">Eliminar empleado</button></div>
+      </form>
+    </dialog>
+
     <script src="./assets/js/user-db.js"></script>
     <script src="./assets/js/session.js"></script>
+    <script src="./assets/js/empleados.js"></script>
   </body>
 </html>

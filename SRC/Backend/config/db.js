@@ -18,6 +18,40 @@ function cleanText(value = "") {
   return String(value).trim().replace(/\s+/g, " ");
 }
 
+function validateEmailAddress(value) {
+  const email = normalizeLoginValue(value);
+  if (!email || email.length > 180) throw new Error("Ingresa un correo electronico valido.");
+  const parts = email.split("@");
+  if (parts.length !== 2) throw new Error("Ingresa un correo electronico valido.");
+  const [localPart, domain] = parts;
+  if (!localPart || localPart.length > 64 || localPart.startsWith(".") || localPart.endsWith(".") || localPart.includes("..")) {
+    throw new Error("Revisa el nombre del correo antes del signo @.");
+  }
+  if (!/^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+$/i.test(localPart)) {
+    throw new Error("El correo contiene caracteres no permitidos.");
+  }
+  const labels = domain.split(".");
+  const domainIsValid = labels.length >= 2 && labels.every((label) => (
+    label.length >= 1 && label.length <= 63 && /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/i.test(label)
+  ));
+  const topLevelDomain = labels.at(-1) || "";
+  if (!domainIsValid || !/^(?:[a-z]{2,63}|xn--[a-z0-9-]{2,59})$/i.test(topLevelDomain)) {
+    throw new Error("Revisa el dominio del correo electronico.");
+  }
+  if (["example", "invalid", "localhost", "test"].includes(topLevelDomain)) {
+    throw new Error("Utiliza un correo real al que puedas acceder.");
+  }
+  const commonTypos = {
+    "gmial.com": "gmail.com",
+    "gmai.com": "gmail.com",
+    "hotnail.com": "hotmail.com",
+    "outlok.com": "outlook.com",
+    "yaho.com": "yahoo.com",
+  };
+  if (commonTypos[domain]) throw new Error(`Revisa el dominio. Quisiste escribir ${commonTypos[domain]}?`);
+  return email;
+}
+
 function hashPassword(password, salt = crypto.randomBytes(16).toString("hex")) {
   const hash = crypto.scryptSync(String(password), salt, 64).toString("hex");
   return `scrypt:${salt}:${hash}`;
@@ -102,7 +136,7 @@ function publicRegistration(row) {
 function validateRegistration(userData) {
   const firstName = cleanText(userData.firstName);
   const lastName = cleanText(userData.lastName);
-  const email = normalizeLoginValue(userData.email);
+  const email = validateEmailAddress(userData.email);
   const username = normalizeLoginValue(userData.username);
   const password = String(userData.password || "");
   const role = cleanText(userData.role) || "Empleado";
@@ -113,14 +147,14 @@ function validateRegistration(userData) {
   if (!/^[\p{L}][\p{L}\s.'-]{1,79}$/u.test(firstName) || !/^[\p{L}][\p{L}\s.'-]{1,79}$/u.test(lastName)) {
     throw new Error("El nombre y los apellidos solo pueden contener letras, espacios, apostrofes o guiones.");
   }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 180) {
-    throw new Error("Ingresa un correo electronico valido.");
-  }
   if (!/^[a-z0-9._-]{4,40}$/.test(username)) {
     throw new Error("El usuario debe tener entre 4 y 40 caracteres: letras, numeros, punto, guion o guion bajo.");
   }
-  if (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
-    throw new Error("La contrasena debe tener al menos 8 caracteres, una letra y un numero.");
+  if (password.length < 8 || password.length > 72 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+    throw new Error("La contrasena debe tener entre 8 y 72 caracteres, una letra y un numero.");
+  }
+  if (/^(?:12345678|password|contrasena|qwerty\d*)$/i.test(password) || password.toLowerCase().includes(username)) {
+    throw new Error("Elige una contrasena que no sea comun ni contenga tu usuario.");
   }
   if (!ALLOWED_ROLES.includes(role)) {
     throw new Error("Selecciona un area de acceso valida.");
@@ -270,15 +304,20 @@ async function ensureAuthTables() {
   await pool.query("UPDATE users u JOIN companies c ON c.id = u.company_id SET u.company = c.name");
   await pool.query("UPDATE registration_requests r JOIN companies c ON c.id = r.company_id SET r.company = c.name");
 
-  const [admins] = await pool.query("SELECT id FROM users WHERE username = 'gabrielh' LIMIT 1");
-  if (admins.length === 0) {
+  const [globalAdmins] = await pool.query("SELECT id FROM users WHERE is_global_admin = 1 AND status = 'Activo' LIMIT 1");
+  const bootstrapPassword = String(process.env.BOOTSTRAP_ADMIN_PASSWORD || "");
+  if (!globalAdmins.length && bootstrapPassword) {
+    if (bootstrapPassword.length < 12 || bootstrapPassword.length > 72 || !/[A-Za-z]/.test(bootstrapPassword) || !/\d/.test(bootstrapPassword)) {
+      throw new Error("BOOTSTRAP_ADMIN_PASSWORD debe tener entre 12 y 72 caracteres, una letra y un numero.");
+    }
+    const bootstrapEmail = validateEmailAddress(process.env.BOOTSTRAP_ADMIN_EMAIL || "");
+    const bootstrapUsername = normalizeLoginValue(process.env.BOOTSTRAP_ADMIN_USERNAME || "administrador");
+    if (!/^[a-z0-9._-]{4,40}$/.test(bootstrapUsername)) throw new Error("BOOTSTRAP_ADMIN_USERNAME no es valido.");
     await pool.query(
       `INSERT INTO users (first_name, last_name, second_last_name, email, username, password, password_hash, company, company_id, role, is_global_admin)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
-      ["Gabriel", "Hernandez", "Flores", "gabriel.hernandez@textilesgh.com", "gabrielh", "__HASHED__", hashPassword("12345678"), defaultCompany[0].name, defaultCompany[0].id, "Administrador"]
+      ["Administrador", "Global", null, bootstrapEmail, bootstrapUsername, "__HASHED__", hashPassword(bootstrapPassword), defaultCompany[0].name, defaultCompany[0].id, "Administrador"]
     );
-  } else {
-    await pool.query("UPDATE users SET is_global_admin = 1, role = 'Administrador', status = 'Activo' WHERE username = 'gabrielh'");
   }
 }
 
@@ -359,7 +398,9 @@ async function revokeSession(token) {
 
 function assertGlobalAdmin(user) {
   if (!user?.isGlobalAdmin || user.role !== "Administrador") {
-    throw new Error("Solo el administrador global puede autorizar registros.");
+    const error = new Error("Solo el administrador global puede autorizar registros.");
+    error.statusCode = 403;
+    throw error;
   }
 }
 
@@ -425,10 +466,9 @@ async function rejectRegistration(id, adminUser, reason = "") {
 
 async function sendPasswordRecovery(email, origin = "http://localhost:3000") {
   await ensureAuthTables();
-  const normalizedEmail = normalizeLoginValue(email);
-  if (!normalizedEmail) throw new Error("Ingresa el correo con el que registraste tu cuenta.");
+  const normalizedEmail = validateEmailAddress(email);
   const [rows] = await pool.query("SELECT id, email, username FROM users WHERE email = ? AND status = 'Activo' LIMIT 1", [normalizedEmail]);
-  if (!rows.length) throw new Error("No existe una cuenta activa con ese correo.");
+  if (!rows.length) return { sent: true, delivered: false };
   const token = crypto.randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
   await pool.query("UPDATE password_recovery_tokens SET used_at = NOW() WHERE user_id = ? AND used_at IS NULL", [rows[0].id]);
@@ -441,8 +481,11 @@ async function sendPasswordRecovery(email, origin = "http://localhost:3000") {
 async function resetPassword(token, password) {
   await ensureAuthTables();
   if (!String(token || "").trim()) throw new Error("El enlace de recuperacion no es valido.");
-  if (String(password || "").length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
-    throw new Error("La nueva contrasena debe tener al menos 8 caracteres, una letra y un numero.");
+  if (String(password || "").length < 8 || String(password || "").length > 72 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+    throw new Error("La nueva contrasena debe tener entre 8 y 72 caracteres, una letra y un numero.");
+  }
+  if (/^(?:12345678|password|contrasena|qwerty\d*)$/i.test(String(password))) {
+    throw new Error("La nueva contrasena es demasiado comun.");
   }
   const [rows] = await pool.query(
     "SELECT id, user_id FROM password_recovery_tokens WHERE token = ? AND used_at IS NULL AND expires_at > NOW() LIMIT 1",
@@ -455,9 +498,59 @@ async function resetPassword(token, password) {
   return { reset: true };
 }
 
+async function deleteOwnAccount(user, password, confirmation) {
+  await ensureAuthTables();
+  if (String(confirmation || "").trim().toUpperCase() !== "ELIMINAR MI CUENTA") {
+    throw new Error("Escribe ELIMINAR MI CUENTA para confirmar.");
+  }
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const [rows] = await connection.query("SELECT * FROM users WHERE id = ? AND status = 'Activo' FOR UPDATE", [user.id]);
+    if (!rows.length) throw new Error("La cuenta ya no esta activa.");
+    const account = rows[0];
+    if (!verifyPassword(password, account.password_hash, account.password)) {
+      const error = new Error("La contrasena actual no es correcta.");
+      error.statusCode = 403;
+      throw error;
+    }
+    if (account.is_global_admin) {
+      const [admins] = await connection.query(
+        "SELECT COUNT(*) total FROM users WHERE is_global_admin = 1 AND status = 'Activo' AND id <> ?",
+        [account.id]
+      );
+      if (!Number(admins[0].total)) {
+        const error = new Error("No puedes eliminar la ultima cuenta de administrador global.");
+        error.statusCode = 409;
+        throw error;
+      }
+    }
+    const suffix = crypto.randomBytes(6).toString("hex");
+    const deletedEmail = `eliminada+${account.id}+${suffix}@cuentas.invalid`;
+    const deletedUsername = `eliminado_${account.id}_${suffix}`;
+    await connection.query(
+      `UPDATE users SET first_name = 'Cuenta', last_name = 'eliminada', second_last_name = NULL,
+       email = ?, username = ?, password = '__HASHED__', password_hash = ?, role = 'Empleado',
+       is_global_admin = 0, status = 'Eliminado' WHERE id = ?`,
+      [deletedEmail, deletedUsername, hashPassword(crypto.randomBytes(32).toString("hex")), account.id]
+    );
+    await connection.query("UPDATE auth_sessions SET revoked_at = NOW() WHERE user_id = ? AND revoked_at IS NULL", [account.id]);
+    await connection.query("UPDATE password_recovery_tokens SET used_at = NOW() WHERE user_id = ? AND used_at IS NULL", [account.id]);
+    await connection.commit();
+    return { deleted: true };
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
 module.exports = {
   ALLOWED_ROLES,
   approveRegistration,
+  cleanText,
+  deleteOwnAccount,
   ensureAuthTables,
   getRegistrations,
   getSession,
@@ -468,4 +561,5 @@ module.exports = {
   resetPassword,
   revokeSession,
   sendPasswordRecovery,
+  validateEmailAddress,
 };

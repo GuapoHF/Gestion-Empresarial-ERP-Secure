@@ -3,6 +3,7 @@ const path = require("path");
 const fs = require("fs");
 const {
   approveRegistration,
+  deleteOwnAccount,
   ensureAuthTables,
   getRegistrations,
   getSession,
@@ -16,9 +17,11 @@ const {
 } = require("./config/db");
 const { ensureRecordsTable, getDataset, saveDataset } = require("./modules/records");
 const { ensureAccountingTables, getAccountingReport } = require("./modules/accounting");
+const { createEmployee, deleteEmployee, ensureEmployeesTable, getEmployee, listEmployees, updateEmployee } = require("./modules/employees");
 
 const PORT = Number(process.env.PORT || 3000);
 const frontendPath = path.resolve(__dirname, "..", "Frontend");
+const rateLimits = new Map();
 const contentTypes = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
@@ -34,12 +37,26 @@ const contentTypes = {
 function sendJson(response, statusCode, payload) {
   response.writeHead(statusCode, {
     "Content-Type": "application/json; charset=utf-8",
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET,POST,PUT,OPTIONS",
+    "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
     "Cache-Control": "no-store",
+    "X-Content-Type-Options": "nosniff",
   });
   response.end(JSON.stringify(payload));
+}
+
+function enforceRateLimit(request, scope, maximum, windowMs) {
+  const address = request.socket.remoteAddress || "local";
+  const key = `${scope}:${address}`;
+  const now = Date.now();
+  const recent = (rateLimits.get(key) || []).filter((timestamp) => now - timestamp < windowMs);
+  if (recent.length >= maximum) {
+    const error = new Error("Demasiados intentos. Espera unos minutos antes de volver a intentar.");
+    error.statusCode = 429;
+    throw error;
+  }
+  recent.push(now);
+  rateLimits.set(key, recent);
 }
 
 function parseJsonBody(request) {
@@ -102,11 +119,13 @@ async function handleApi(request, response, requestUrl) {
     return true;
   }
   if (route === "/api/auth/register" && request.method === "POST") {
+    enforceRateLimit(request, "register", 10, 60 * 60 * 1000);
     const registration = await requestRegistration(await parseJsonBody(request));
     sendJson(response, 201, { registration, message: "Solicitud enviada. El administrador revisara tu acceso para la empresa seleccionada." });
     return true;
   }
   if (route === "/api/auth/login" && request.method === "POST") {
+    enforceRateLimit(request, "login", 12, 10 * 60 * 1000);
     const { username, password } = await parseJsonBody(request);
     const result = await loginUser(username, password);
     if (!result) {
@@ -126,15 +145,23 @@ async function handleApi(request, response, requestUrl) {
     return true;
   }
   if (route === "/api/auth/recover" && request.method === "POST") {
+    enforceRateLimit(request, "recover", 6, 15 * 60 * 1000);
     const { email } = await parseJsonBody(request);
-    const origin = request.headers.origin || `http://localhost:${PORT}`;
-    const result = await sendPasswordRecovery(email, origin);
-    sendJson(response, 200, { message: "Correo registrado. Enviamos el enlace de recuperacion.", ...result });
+    const origin = process.env.APP_ORIGIN || `http://localhost:${PORT}`;
+    await sendPasswordRecovery(email, origin);
+    sendJson(response, 200, { sent: true, message: "Si existe una cuenta activa con ese correo, enviaremos las instrucciones de recuperacion." });
     return true;
   }
   if (route === "/api/auth/reset" && request.method === "POST") {
     const { token, password } = await parseJsonBody(request);
     sendJson(response, 200, { message: "Contrasena actualizada. Ya puedes iniciar sesion.", ...(await resetPassword(token, password)) });
+    return true;
+  }
+  if (route === "/api/auth/account" && request.method === "DELETE") {
+    enforceRateLimit(request, "delete-account", 5, 15 * 60 * 1000);
+    const user = await requireSession(request);
+    const { password, confirmation } = await parseJsonBody(request);
+    sendJson(response, 200, { ...(await deleteOwnAccount(user, password, confirmation)), message: "Tu cuenta fue eliminada correctamente." });
     return true;
   }
 
@@ -158,6 +185,34 @@ async function handleApi(request, response, requestUrl) {
     const { id, reason } = await parseJsonBody(request);
     await rejectRegistration(id, user, reason);
     sendJson(response, 200, { message: "Solicitud rechazada correctamente." });
+    return true;
+  }
+
+  if (route === "/api/employees" && request.method === "GET") {
+    const user = await requireSession(request);
+    sendJson(response, 200, { employees: await listEmployees(user, Object.fromEntries(requestUrl.searchParams)) });
+    return true;
+  }
+  if (route === "/api/employees" && request.method === "POST") {
+    const user = await requireSession(request);
+    sendJson(response, 201, { employee: await createEmployee(user, await parseJsonBody(request)), message: "Empleado registrado correctamente." });
+    return true;
+  }
+  const employeeMatch = route.match(/^\/api\/employees\/(\d+)$/);
+  if (employeeMatch && request.method === "GET") {
+    const user = await requireSession(request);
+    sendJson(response, 200, { employee: await getEmployee(user, employeeMatch[1]) });
+    return true;
+  }
+  if (employeeMatch && request.method === "PUT") {
+    const user = await requireSession(request);
+    sendJson(response, 200, { employee: await updateEmployee(user, employeeMatch[1], await parseJsonBody(request)), message: "Empleado actualizado correctamente." });
+    return true;
+  }
+  if (employeeMatch && request.method === "DELETE") {
+    const user = await requireSession(request);
+    const { confirmation } = await parseJsonBody(request);
+    sendJson(response, 200, { ...(await deleteEmployee(user, employeeMatch[1], confirmation)), message: "Empleado eliminado correctamente." });
     return true;
   }
 
@@ -202,6 +257,7 @@ async function start() {
   await ensureAuthTables();
   await ensureRecordsTable();
   await ensureAccountingTables();
+  await ensureEmployeesTable();
   http.createServer(handleRequest).listen(PORT, () => {
     console.log(`Servidor iniciado en http://localhost:${PORT}`);
   });

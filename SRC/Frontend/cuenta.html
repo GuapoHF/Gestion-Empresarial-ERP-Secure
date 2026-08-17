@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gestion Empresarial | Mi Cuenta</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./assets/css/styles.css?v=8" />
+  </head>
+  <body>
+    <main class="app-layout">
+      <aside class="sidebar">
+        <a class="brand sidebar-brand" href="./dashboard.html">Gestion Empresarial<span>.</span></a>
+        <nav class="side-nav" aria-label="Modulos">
+          <p>Modulos</p>
+          <a href="./dashboard.html"><img src="./assets/icons/dashboard.svg" alt="" />Dashboard</a>
+          <a href="./admin.html"><img src="./assets/icons/admin.svg" alt="" />Administrador</a>
+          <a href="./modulo.html?modulo=compras"><img src="./assets/icons/compras.svg" alt="" />Compras</a>
+          <a href="./modulo.html?modulo=ventas"><img src="./assets/icons/ventas.svg" alt="" />Facturacion / Ventas</a>
+          <a href="./inventario.html"><img src="./assets/icons/inventarios.svg" alt="" />Inventarios</a>
+          <a href="./modulo.html?modulo=contabilidad"><img src="./assets/icons/contabilidad.svg" alt="" />Contabilidad</a>
+          <a href="./modulo.html?modulo=costos"><img src="./assets/icons/costos.svg" alt="" />Costos</a>
+        </nav>
+        <div class="user-box">
+          <div class="avatar">U</div><div><strong>usuario</strong><span>Rol</span></div>
+          <a class="logout" href="./login.html" aria-label="Cerrar sesion"><img src="./assets/icons/logout.svg" alt="" /></a>
+        </div>
+      </aside>
+
+      <section class="workspace">
+        <header class="topbar">
+          <div class="breadcrumbs"><a href="./dashboard.html">Inicio</a><img src="./assets/icons/crumb.svg" alt="" /><strong>Mi Cuenta</strong></div>
+          <div class="topbar-actions"><span></span><a href="./modulo.html?modulo=ayuda"><img src="./assets/icons/help.svg" alt="" />Ayuda</a></div>
+        </header>
+        <section class="content-area account-content">
+          <header class="page-title"><h1>Mi Cuenta</h1><p>Identidad, acceso y empresa asociados a tu sesion.</p></header>
+
+          <section class="account-profile" aria-labelledby="account-profile-title">
+            <header><div class="account-avatar" id="account-avatar">U</div><div><h2 id="account-profile-title">Datos de la cuenta</h2><p id="account-full-name"></p></div></header>
+            <dl class="account-details">
+              <div><dt>Usuario</dt><dd id="account-username"></dd></div>
+              <div><dt>Correo</dt><dd id="account-email"></dd></div>
+              <div><dt>Empresa</dt><dd id="account-company"></dd></div>
+              <div><dt>Rol</dt><dd id="account-role"></dd></div>
+            </dl>
+          </section>
+
+          <section class="danger-zone" aria-labelledby="danger-zone-title">
+            <div><h2 id="danger-zone-title">Eliminar cuenta</h2><p>Se cerraran todas tus sesiones y perderas el acceso al sistema.</p></div>
+            <button class="danger-action" id="open-delete-account" type="button"><img src="./assets/icons/inventory-delete.svg" alt="" />Eliminar mi cuenta</button>
+          </section>
+          <p class="module-toast" id="account-message" role="status" hidden></p>
+        </section>
+      </section>
+    </main>
+
+    <dialog class="confirm-dialog" id="delete-account-dialog" aria-labelledby="delete-account-title">
+      <form class="confirm-dialog-card" id="delete-account-form">
+        <header><img src="./assets/icons/config-warning.svg" alt="" /><div><h2 id="delete-account-title">Eliminar mi cuenta</h2><p>Esta operacion no puede deshacerse. Los datos identificables de la cuenta seran retirados.</p></div></header>
+        <div class="field login-password"><label for="delete-account-password">Contrasena actual</label><div class="password-control"><input id="delete-account-password" type="password" autocomplete="current-password" required /><button class="icon-button" id="toggle-account-password" type="button" aria-label="Mostrar contrasena"><img src="./assets/icons/eye.svg" alt="" /></button></div></div>
+        <div class="field"><label for="delete-account-confirmation">Escribe <strong>ELIMINAR MI CUENTA</strong></label><input id="delete-account-confirmation" autocomplete="off" required /></div>
+        <p class="input-error" id="delete-account-error" role="alert" hidden></p>
+        <div class="confirm-dialog-actions"><button class="secondary-action" type="button" id="cancel-delete-account">Cancelar</button><button class="danger-action" type="submit">Eliminar definitivamente</button></div>
+      </form>
+    </dialog>
+
+    <script src="./assets/js/user-db.js"></script>
+    <script src="./assets/js/session.js"></script>
+    <script src="./assets/js/cuenta.js"></script>
+  </body>
+</html>
