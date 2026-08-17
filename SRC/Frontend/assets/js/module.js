@@ -69,6 +69,18 @@ async function syncDataset() {
     } else {
       await window.gestionUserDb.saveDataset(currentKey, currentViewKey, rows);
     }
+    if (currentKey === "compras" && typeof currentView.metrics === "string") {
+      const relatedViews = ["proveedores", "ordenes", "recepciones", "comparativo", "pagos"].filter((viewKey) => viewKey !== currentViewKey);
+      await Promise.all(relatedViews.map(async (viewKey) => {
+        try {
+          const related = await window.gestionUserDb.getDataset("compras", viewKey);
+          if (related.initialized) localStorage.setItem(rowsStorageKey("compras", viewKey), JSON.stringify(related.rows));
+        } catch (error) {
+          // Each related section keeps using its local copy when it cannot be synchronized.
+        }
+      }));
+    }
+    renderMetrics();
     renderFilterOptions();
     renderTable();
   } catch (error) {
@@ -99,8 +111,60 @@ function renderTabs() {
   ).join("");
 }
 
+function numericValue(value) {
+  const normalized = String(value ?? "").replace(/[^\d,.-]/g, "").replaceAll(",", "");
+  return Number.parseFloat(normalized) || 0;
+}
+
+function purchaseRows(viewKey) {
+  if (currentKey === "compras" && viewKey === currentViewKey) return rows;
+  const viewDefinition = modules.compras.views[viewKey];
+  return loadRows("compras", viewKey, viewDefinition?.rows || []);
+}
+
+function purchaseMetrics(metricType) {
+  const suppliers = purchaseRows("proveedores");
+  const orders = purchaseRows("ordenes");
+  const receipts = purchaseRows("recepciones");
+  const comparisons = purchaseRows("comparativo");
+  const payables = purchaseRows("pagos");
+  const activeSuppliers = suppliers.filter((row) => String(row[6]).toLowerCase() === "activo");
+  const openOrders = orders.filter((row) => !/recibida|cancelada/i.test(row[5]));
+  const inTransit = orders.filter((row) => /transito/i.test(row[5]));
+  const validReceipts = receipts.filter((row) => /validada/i.test(row[6]));
+  const deliveryDays = comparisons.map((row) => numericValue(row[3])).filter((value) => value > 0);
+  const complianceRates = comparisons.map((row) => numericValue(row[5]));
+  const average = (values) => values.length ? values.reduce((total, value) => total + value, 0) / values.length : 0;
+  const currency = (value) => `${moduleSessionUser.currencySymbol || "L"} ${Math.round(value).toLocaleString(moduleSessionUser.locale || "es-HN")}`;
+
+  if (metricType === "purchase-suppliers") return [
+    ["Proveedores activos", String(activeSuppliers.length), `${suppliers.length} proveedores registrados`],
+    ["Credito disponible", currency(suppliers.reduce((total, row) => total + numericValue(row[4]), 0)), `${suppliers.filter((row) => numericValue(row[4]) > 0).length} lineas autorizadas`],
+    ["Entrega promedio", `${average(deliveryDays).toFixed(1)} dias`, `${deliveryDays.length} ofertas comparadas`],
+    ["Cumplimiento", `${Math.round(average(complianceRates))}%`, `${complianceRates.length} evaluaciones de proveedor`],
+  ];
+  if (metricType === "purchase-orders") return [
+    ["Ordenes abiertas", String(openOrders.length), `${openOrders.filter((row) => /pendiente/i.test(row[5])).length} requieren aprobacion`],
+    ["En transito", currency(inTransit.reduce((total, row) => total + numericValue(row[4]), 0)), `${inTransit.length} ordenes en camino`],
+    ["Proveedores activos", String(activeSuppliers.length), `${suppliers.length} proveedores registrados`],
+    ["Recepciones conformes", `${receipts.length ? Math.round((validReceipts.length / receipts.length) * 100) : 0}%`, `${validReceipts.length} de ${receipts.length} recepciones validadas`],
+  ];
+  if (metricType === "purchase-payables") {
+    const openPayables = payables.filter((row) => !/pagado/i.test(row[6]));
+    const overdue = openPayables.filter((row) => /vencido/i.test(row[6]));
+    const partial = openPayables.filter((row) => /parcial/i.test(row[6]));
+    return [
+      ["Saldo total", currency(openPayables.reduce((total, row) => total + numericValue(row[4]), 0)), `${openPayables.length} documentos abiertos`],
+      ["Por vencer", currency(openPayables.filter((row) => /por vencer/i.test(row[6])).reduce((total, row) => total + numericValue(row[4]), 0)), "Segun documentos registrados"],
+      ["Pagos parciales", currency(partial.reduce((total, row) => total + numericValue(row[4]), 0)), `${partial.length} documentos con abonos`],
+      ["Vencido", currency(overdue.reduce((total, row) => total + numericValue(row[4]), 0)), `${overdue.length} documentos requieren atencion`],
+    ];
+  }
+  return [];
+}
+
 function renderMetrics() {
-  const metrics = currentView.metrics || [];
+  const metrics = typeof currentView.metrics === "string" ? purchaseMetrics(currentView.metrics) : (currentView.metrics || []);
   metricsContainer.innerHTML = metrics.map(([label, value, detail]) =>
     `<article><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong><small>${escapeHtml(detail)}</small></article>`
   ).join("");
@@ -409,6 +473,7 @@ view.addEventListener("click", async (event) => {
     await saveRows();
     renderFilterOptions();
     renderTable();
+    renderMetrics();
     showToast("Registro eliminado correctamente.");
   }
 });
@@ -429,6 +494,7 @@ form.addEventListener("submit", async (event) => {
   closeForm();
   renderFilterOptions();
   renderTable();
+  renderMetrics();
   showToast(wasEditing ? "Registro actualizado correctamente." : "Registro guardado correctamente.");
 });
 
