@@ -27,7 +27,17 @@ El servidor tambien ejecuta migraciones compatibles al iniciar, por lo que conse
 
 La conexion predeterminada usa `localhost:3306`, usuario `root`, contrasena vacia y base `textiles_db`. Se puede cambiar con `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` y `PORT`.
 
-En una base nueva, el primer administrador global se crea solo cuando se configuran `BOOTSTRAP_ADMIN_PASSWORD`, `BOOTSTRAP_ADMIN_EMAIL` y, opcionalmente, `BOOTSTRAP_ADMIN_USERNAME`. La contrasena inicial debe tener al menos 12 caracteres, una letra y un numero. Una vez creada la cuenta, estas variables pueden retirarse.
+En desarrollo, si todavia no existe un administrador global activo, el backend crea automaticamente esta cuenta de pruebas al arrancar:
+
+- Usuario: `administrador`
+- Contrasena: `Admin12345678`
+- Correo: `administrador@vicmar.hn`
+
+La cuenta permite revisar todas las empresas y secciones, ademas de aprobar las solicitudes de registro. Solo se crea si `NODE_ENV` no es `production` y no reemplaza una cuenta administradora existente.
+
+Para personalizar las credenciales se pueden definir `BOOTSTRAP_ADMIN_PASSWORD`, `BOOTSTRAP_ADMIN_EMAIL` y `BOOTSTRAP_ADMIN_USERNAME`. La contrasena inicial debe tener al menos 12 caracteres, una letra y un numero. En produccion no hay credenciales predeterminadas: estas variables son obligatorias para crear el primer administrador y pueden retirarse despues del primer arranque.
+
+El frontend debe abrirse desde `http://localhost:3000`; abrir los HTML directamente o desde otro servidor impide que las solicitudes lleguen a `/api`.
 
 Para recuperacion por correo se aceptan `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` y `SMTP_STARTTLS`. Sin SMTP, el enlace de recuperacion se muestra en la consola local.
 

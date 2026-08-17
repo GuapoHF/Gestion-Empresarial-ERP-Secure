@@ -24,10 +24,14 @@ async function requestJson(path, options = {}) {
   } catch (error) {
     throw new Error("No se pudo conectar con el servidor. Verifica que XAMPP y el backend esten activos.");
   }
-  const data = await response.json().catch(() => ({}));
+  const responseType = response.headers.get("content-type") || "";
+  const data = responseType.includes("application/json") ? await response.json().catch(() => ({})) : {};
   if (!response.ok) {
     if (response.status === 401) clearSession();
-    throw new Error(data.message || "No se pudo completar la solicitud.");
+    if (!responseType.includes("application/json")) {
+      throw new Error("El backend no respondio correctamente. Abre la aplicacion desde http://localhost:3000 y verifica que npm start este activo.");
+    }
+    throw new Error(data.message || `No se pudo completar la solicitud (HTTP ${response.status}).`);
   }
   return data;
 }
