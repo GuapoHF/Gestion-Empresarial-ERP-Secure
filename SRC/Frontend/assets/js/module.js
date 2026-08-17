@@ -214,6 +214,31 @@ function renderFilterOptions() {
   filterInput.innerHTML = '<option value="">Todos</option>' + statuses.map((status) => `<option value="${escapeHtml(status)}">${escapeHtml(status)}</option>`).join("");
 }
 
+function refreshDataView() {
+  renderFilterOptions();
+  renderTable();
+  renderMetrics();
+}
+
+function handleStoredRowsChange(event) {
+  if (!event.key?.startsWith(`textiles-gh-${currentKey}-`) || event.newValue === null) return;
+
+  if (event.key === storageKey) {
+    try {
+      const savedRows = JSON.parse(event.newValue);
+      if (Array.isArray(savedRows)) rows = savedRows;
+    } catch (error) {
+      return;
+    }
+    refreshDataView();
+    return;
+  }
+
+  // Purchase indicators combine several sections, so a change made in another
+  // tab must also refresh the cards shown in the current section.
+  if (currentKey === "compras" && typeof currentView.metrics === "string") renderMetrics();
+}
+
 function renderReports() {
   toolbar.innerHTML = `<label class="module-filter"><span>Periodo</span><select><option>Agosto 2026</option><option>Julio 2026</option><option>Segundo trimestre 2026</option></select></label>
     <label class="module-filter"><span>Ubicacion</span><select><option>Todas las ubicaciones</option><option>Bodega Central</option><option>Tienda Principal</option></select></label>`;
@@ -470,10 +495,8 @@ view.addEventListener("click", async (event) => {
   if (button.dataset.action === "details") showToast("Detalle consultado. No hay cambios pendientes.");
   if (button.dataset.action === "delete") {
     rows.splice(index, 1);
+    refreshDataView();
     await saveRows();
-    renderFilterOptions();
-    renderTable();
-    renderMetrics();
     showToast("Registro eliminado correctamente.");
   }
 });
@@ -490,15 +513,16 @@ form.addEventListener("submit", async (event) => {
   const values = currentView.fields.map(([, type], index) => formatFieldValue(data.get(`field-${index}`), type));
   if (wasEditing) rows[editIndex] = values;
   else rows.unshift(values);
-  await saveRows();
   closeForm();
-  renderFilterOptions();
-  renderTable();
-  renderMetrics();
+  // Reflect the edit in both the table and its summary cards immediately;
+  // remote persistence can finish afterwards without freezing the interface.
+  refreshDataView();
+  await saveRows();
   showToast(wasEditing ? "Registro actualizado correctamente." : "Registro guardado correctamente.");
 });
 
 document.querySelector("#module-dialog-close").addEventListener("click", closeForm);
 document.querySelector("#module-dialog-cancel").addEventListener("click", closeForm);
 dialog.addEventListener("click", (event) => { if (event.target === dialog) closeForm(); });
+window.addEventListener("storage", handleStoredRowsChange);
 initializePage();
