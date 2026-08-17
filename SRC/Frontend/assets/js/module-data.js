@@ -6,7 +6,7 @@ window.TEXTILES_MODULES = {
       proveedores: {
         label: "Proveedores", description: "Expediente, condiciones comerciales e historial de cada proveedor.",
         action: "+ Nuevo Proveedor", search: "Buscar proveedor, RTN o contacto...",
-        metrics: [["Proveedores activos", "12", "2 internacionales"], ["Credito disponible", "L 420,000", "En lineas autorizadas"], ["Entrega promedio", "6.4 dias", "-0.8 dias este mes"], ["Cumplimiento", "94%", "Ultimas 30 entregas"]],
+        metrics: "purchase-suppliers",
         columns: ["Codigo", "Proveedor", "RTN", "Contacto", "Credito", "Plazo", "Estado", "Acciones"], statusIndex: 6,
         rows: [["PRV-001", "Textiles del Norte", "0801-1998-14521", "Laura Mendez", "L 120,000", "30 dias", "Activo"], ["PRV-002", "Hilaturas Maya", "0501-2002-03984", "Sofia Rivera", "L 85,000", "15 dias", "Activo"], ["PRV-003", "Fibras Centroamericanas", "0801-1995-88210", "Jorge Paz", "L 160,000", "45 dias", "Activo"], ["PRV-004", "Sedas y Acabados", "0801-2011-27643", "Marta Leon", "L 55,000", "Contado", "Revision"]],
         fields: [["Codigo", "text", "PRV-005"], ["Proveedor", "text", "Razon social"], ["RTN", "text", "Registro tributario"], ["Contacto", "text", "Nombre del contacto"], ["Credito", "number", "Limite en HNL"], ["Plazo", "select", ["Contado", "15 dias", "30 dias", "45 dias", "60 dias"]], ["Estado", "select", ["Activo", "Revision", "Suspendido"]]],
@@ -22,7 +22,7 @@ window.TEXTILES_MODULES = {
       ordenes: {
         label: "Ordenes", description: "Ordenes de compra de telas y seguimiento a proveedores.",
         action: "+ Nueva Orden", search: "Buscar orden, proveedor o tela...",
-        metrics: [["Ordenes abiertas", "8", "3 requieren aprobacion"], ["En transito", "L 184,600", "Entrega estimada esta semana"], ["Proveedores activos", "12", "2 internacionales"], ["Entregas a tiempo", "94%", "+3.2% contra julio"]],
+        metrics: "purchase-orders",
         columns: ["Orden", "Proveedor", "Tela principal", "Entrega", "Total", "Estado", "Acciones"], statusIndex: 5,
         rows: [["OC-2026-041", "Textiles del Norte", "Lino premium", "18 ago 2026", "L 68,400", "En transito"], ["OC-2026-040", "Hilaturas Maya", "Popelina blanca", "16 ago 2026", "L 41,250", "Pendiente"], ["OC-2026-039", "Fibras Centroamericanas", "Mezclilla 12 oz", "14 ago 2026", "L 53,900", "Recibida"], ["OC-2026-038", "Distribuidora Pacifico", "Manta cruda", "22 ago 2026", "L 21,050", "Borrador"]],
         fields: [["Orden", "text", "OC-2026-042"], ["Proveedor", "text", "Nombre del proveedor"], ["Tela principal", "text", "Tela y cantidad"], ["Entrega", "date", ""], ["Total", "number", "Monto en lempiras"], ["Estado", "select", ["Borrador", "Pendiente", "Aprobada", "En transito", "Recibida"]]],
@@ -46,7 +46,7 @@ window.TEXTILES_MODULES = {
       pagos: {
         label: "Cuentas por Pagar", description: "Saldos, vencimientos, anticipos y pagos a proveedores.",
         action: "+ Registrar Pago", search: "Buscar proveedor, documento o vencimiento...",
-        metrics: [["Saldo total", "L 143,650", "8 documentos abiertos"], ["Vence esta semana", "L 62,400", "3 proveedores"], ["Anticipos", "L 18,500", "Disponibles por aplicar"], ["Vencido", "L 12,750", "Requiere atencion"]],
+        metrics: "purchase-payables",
         columns: ["Documento", "Proveedor", "Vencimiento", "Original", "Saldo", "Moneda", "Estado", "Acciones"], statusIndex: 6,
         rows: [["CP-2026-318", "Textiles del Norte", "20 ago 2026", "L 68,400", "L 68,400", "HNL", "Por vencer"], ["CP-2026-314", "Hilaturas Maya", "16 ago 2026", "L 41,250", "L 20,625", "HNL", "Parcial"], ["CP-2026-309", "Sedas y Acabados", "10 ago 2026", "L 36,780", "L 12,750", "HNL", "Vencido"]],
         fields: [["Documento", "text", "CP-2026-319"], ["Proveedor", "text", "Proveedor"], ["Vencimiento", "date", ""], ["Original", "number", "Monto original"], ["Saldo", "number", "Saldo pendiente"], ["Moneda", "select", ["HNL", "USD"]], ["Estado", "select", ["Por vencer", "Parcial", "Pagado", "Vencido"]]],
