@@ -9,6 +9,11 @@ const COMPANIES = [
 ];
 const ALLOWED_ROLES = ["Empleado", "Ventas", "Compras", "Inventarios", "Contabilidad"];
 const SESSION_HOURS = 12;
+const DEVELOPMENT_ADMIN = {
+  email: "administrador@vicmar.hn",
+  username: "administrador",
+  password: "Admin12345678",
+};
 
 function normalizeLoginValue(value = "") {
   return String(value).trim().toLowerCase();
@@ -305,13 +310,14 @@ async function ensureAuthTables() {
   await pool.query("UPDATE registration_requests r JOIN companies c ON c.id = r.company_id SET r.company = c.name");
 
   const [globalAdmins] = await pool.query("SELECT id FROM users WHERE is_global_admin = 1 AND status = 'Activo' LIMIT 1");
-  const bootstrapPassword = String(process.env.BOOTSTRAP_ADMIN_PASSWORD || "");
+  const allowDevelopmentAdmin = process.env.NODE_ENV !== "production";
+  const bootstrapPassword = String(process.env.BOOTSTRAP_ADMIN_PASSWORD || (allowDevelopmentAdmin ? DEVELOPMENT_ADMIN.password : ""));
   if (!globalAdmins.length && bootstrapPassword) {
     if (bootstrapPassword.length < 12 || bootstrapPassword.length > 72 || !/[A-Za-z]/.test(bootstrapPassword) || !/\d/.test(bootstrapPassword)) {
       throw new Error("BOOTSTRAP_ADMIN_PASSWORD debe tener entre 12 y 72 caracteres, una letra y un numero.");
     }
-    const bootstrapEmail = validateEmailAddress(process.env.BOOTSTRAP_ADMIN_EMAIL || "");
-    const bootstrapUsername = normalizeLoginValue(process.env.BOOTSTRAP_ADMIN_USERNAME || "administrador");
+    const bootstrapEmail = validateEmailAddress(process.env.BOOTSTRAP_ADMIN_EMAIL || (allowDevelopmentAdmin ? DEVELOPMENT_ADMIN.email : ""));
+    const bootstrapUsername = normalizeLoginValue(process.env.BOOTSTRAP_ADMIN_USERNAME || DEVELOPMENT_ADMIN.username);
     if (!/^[a-z0-9._-]{4,40}$/.test(bootstrapUsername)) throw new Error("BOOTSTRAP_ADMIN_USERNAME no es valido.");
     await pool.query(
       `INSERT INTO users (first_name, last_name, second_last_name, email, username, password, password_hash, company, company_id, role, is_global_admin)
