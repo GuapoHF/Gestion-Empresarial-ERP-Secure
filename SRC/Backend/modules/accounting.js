@@ -145,7 +145,7 @@ function resolveCompanyId(user, requestedCompanyId) {
 
 async function ensureAccountingTables() {
   await pool.query(`CREATE TABLE IF NOT EXISTS accounting_balances (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     company_id INT NOT NULL,
     period CHAR(7) NOT NULL,
     account_code VARCHAR(30) NOT NULL,
@@ -154,10 +154,10 @@ async function ensureAccountingTables() {
     opening_balance DECIMAL(18,2) NOT NULL DEFAULT 0,
     debit DECIMAL(18,2) NOT NULL DEFAULT 0,
     credit DECIMAL(18,2) NOT NULL DEFAULT 0,
-    UNIQUE KEY uq_accounting_balance (company_id, period, account_code)
+    CONSTRAINT uq_accounting_balance UNIQUE (company_id, period, account_code)
   )`);
   await pool.query(`CREATE TABLE IF NOT EXISTS payroll_concepts (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     company_id INT NOT NULL,
     concept_key VARCHAR(20) NOT NULL,
     description VARCHAR(180) NOT NULL,
@@ -167,10 +167,10 @@ async function ensureAccountingTables() {
     benefit VARCHAR(10) NOT NULL,
     movement_type VARCHAR(20) NOT NULL,
     accumulated DECIMAL(18,2) NOT NULL DEFAULT 0,
-    UNIQUE KEY uq_payroll_concept (company_id, concept_key)
+    CONSTRAINT uq_payroll_concept UNIQUE (company_id, concept_key)
   )`);
   await pool.query(`CREATE TABLE IF NOT EXISTS sales_profit_lines (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     company_id INT NOT NULL,
     period CHAR(7) NOT NULL,
     product_code VARCHAR(40) NOT NULL,
@@ -178,10 +178,10 @@ async function ensureAccountingTables() {
     quantity DECIMAL(18,2) NOT NULL DEFAULT 0,
     total_cost DECIMAL(18,2) NOT NULL DEFAULT 0,
     total_price DECIMAL(18,2) NOT NULL DEFAULT 0,
-    UNIQUE KEY uq_sales_profit_line (company_id, period, product_code)
+    CONSTRAINT uq_sales_profit_line UNIQUE (company_id, period, product_code)
   )`);
   await pool.query(`CREATE TABLE IF NOT EXISTS purchase_invoices (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     company_id INT NOT NULL,
     invoice_number VARCHAR(50) NOT NULL,
     supplier VARCHAR(180) NOT NULL,
@@ -192,10 +192,10 @@ async function ensureAccountingTables() {
     net_weight DECIMAL(18,2) NOT NULL DEFAULT 0,
     gross_weight DECIMAL(18,2) NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY uq_purchase_invoice (company_id, invoice_number)
+    CONSTRAINT uq_purchase_invoice UNIQUE (company_id, invoice_number)
   )`);
   await pool.query(`CREATE TABLE IF NOT EXISTS purchase_invoice_lines (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     invoice_id BIGINT NOT NULL,
     work_order VARCHAR(30) NOT NULL,
     style_code VARCHAR(30) NOT NULL,
@@ -204,8 +204,7 @@ async function ensureAccountingTables() {
     quantity DECIMAL(18,2) NOT NULL DEFAULT 0,
     unit VARCHAR(10) NOT NULL,
     unit_price DECIMAL(18,4) NOT NULL DEFAULT 0,
-    line_total DECIMAL(18,2) NOT NULL DEFAULT 0,
-    INDEX idx_purchase_invoice_lines (invoice_id)
+    line_total DECIMAL(18,2) NOT NULL DEFAULT 0
   )`);
 }
 
@@ -232,8 +231,9 @@ async function seedAccounting(company, period) {
         `INSERT INTO payroll_concepts
          (company_id, concept_key, description, status, integrates_salary, calculation_scope, benefit, movement_type, accumulated)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE description = VALUES(description), status = VALUES(status), integrates_salary = VALUES(integrates_salary),
-         calculation_scope = VALUES(calculation_scope), benefit = VALUES(benefit), movement_type = VALUES(movement_type), accumulated = VALUES(accumulated)`,
+         ON CONFLICT (company_id, concept_key) DO UPDATE SET description = EXCLUDED.description, status = EXCLUDED.status,
+         integrates_salary = EXCLUDED.integrates_salary, calculation_scope = EXCLUDED.calculation_scope, benefit = EXCLUDED.benefit,
+         movement_type = EXCLUDED.movement_type, accumulated = EXCLUDED.accumulated`,
         [companyId, ...row]
       );
     }
@@ -253,7 +253,8 @@ async function seedAccounting(company, period) {
     `INSERT INTO purchase_invoices
      (company_id, invoice_number, supplier, issue_date, due_date, currency, status, net_weight, gross_weight)
      VALUES (?, ?, ?, ?, ?, 'USD', 'Recibida', 20906, 9482.90)
-     ON DUPLICATE KEY UPDATE supplier = VALUES(supplier), issue_date = VALUES(issue_date), due_date = VALUES(due_date)`,
+     ON CONFLICT (company_id, invoice_number) DO UPDATE
+     SET supplier = EXCLUDED.supplier, issue_date = EXCLUDED.issue_date, due_date = EXCLUDED.due_date`,
     [companyId, invoiceNumber, "ELCATEX S. de R.L. de C.V.", "2025-07-09", "2025-07-09"]
   );
   const [invoiceRows] = await pool.query("SELECT id FROM purchase_invoices WHERE company_id = ? AND invoice_number = ? LIMIT 1", [companyId, invoiceNumber]);
