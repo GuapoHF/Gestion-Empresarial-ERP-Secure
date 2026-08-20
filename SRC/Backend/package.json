@@ -7,7 +7,6 @@
     "check": "node --check server.js && node --check config/db.js && node --check config/permissions.js && node --check modules/records.js && node --check modules/accounting.js && node --check modules/employees.js"
   },
   "dependencies": {
-    "mysql2": "^3.23.2"
+    "pg": "^8.16.3"
   }
 }
-

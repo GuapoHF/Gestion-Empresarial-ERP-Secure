@@ -104,7 +104,7 @@ function validateEmployee(body, countryCode) {
 
 async function ensureEmployeesTable() {
   await pool.query(`CREATE TABLE IF NOT EXISTS employees (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     company_id INT NOT NULL,
     seed_key VARCHAR(80) NULL,
     first_name VARCHAR(120) NOT NULL,
@@ -123,12 +123,11 @@ async function ensureEmployeesTable() {
     status VARCHAR(30) NOT NULL DEFAULT 'Activo',
     created_by INT NULL,
     deleted_by INT NULL,
-    deleted_at DATETIME NULL,
+    deleted_at TIMESTAMP NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY uq_employee_email_company (company_id, email),
-    UNIQUE KEY uq_employee_seed_company (company_id, seed_key),
-    INDEX idx_employee_company_status (company_id, status)
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_employee_email_company UNIQUE (company_id, email),
+    CONSTRAINT uq_employee_seed_company UNIQUE (company_id, seed_key)
   )`);
 
   const [companies] = await pool.query("SELECT id, code, country_code FROM companies WHERE active = 1");
@@ -141,9 +140,10 @@ async function ensureEmployeesTable() {
     const domain = company.code === "TELAS_OLIMPICA_MX" ? "telasolimpica.mx" : company.code === "GRUPO_CIRSA_HN" ? "grupocirsa.hn" : "vicmar.hn";
     for (const [seedKey, firstName, lastName, secondLastName, position, branch, role] of seeds) {
       await pool.query(
-        `INSERT IGNORE INTO employees
+        `INSERT INTO employees
          (company_id, seed_key, first_name, last_name, second_last_name, email, position, branch, system_role)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT (company_id, seed_key) DO NOTHING`,
         [company.id, seedKey, firstName, lastName, secondLastName || null, `${seedKey}@${domain}`, position, branch, role]
       );
     }
@@ -204,7 +204,7 @@ async function createEmployee(user, body) {
     );
     return getEmployee(user, result.insertId);
   } catch (error) {
-    if (error.code === "ER_DUP_ENTRY") throw new Error("Ya existe un empleado con ese correo en la empresa.");
+    if (error.code === "23505") throw new Error("Ya existe un empleado con ese correo en la empresa.");
     throw error;
   }
 }
@@ -217,7 +217,8 @@ async function updateEmployee(user, id, body) {
   try {
     await pool.query(
       `UPDATE employees SET first_name = ?, last_name = ?, second_last_name = ?, email = ?, birth_date = ?, birth_place = ?,
-       gender = ?, identity_number = ?, tax_number = ?, social_security_number = ?, position = ?, branch = ?, system_role = ?
+       gender = ?, identity_number = ?, tax_number = ?, social_security_number = ?, position = ?, branch = ?, system_role = ?,
+       updated_at = CURRENT_TIMESTAMP
        WHERE id = ? AND status <> 'Eliminado'`,
       [valid.firstName, valid.lastName, valid.secondLastName || null, valid.email, valid.birthDate, valid.birthPlace || null,
        valid.gender, valid.identityNumber || null, valid.taxNumber || null, valid.socialSecurityNumber || null, valid.position,
@@ -225,7 +226,7 @@ async function updateEmployee(user, id, body) {
     );
     return getEmployee(user, id);
   } catch (error) {
-    if (error.code === "ER_DUP_ENTRY") throw new Error("Ya existe un empleado con ese correo en la empresa.");
+    if (error.code === "23505") throw new Error("Ya existe un empleado con ese correo en la empresa.");
     throw error;
   }
 }

@@ -22,15 +22,15 @@ async function assertActiveCompany(companyId) {
 
 async function ensureRecordsTable() {
   await pool.query(`CREATE TABLE IF NOT EXISTS business_datasets (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     company_id INT NOT NULL,
     module_key VARCHAR(40) NOT NULL,
     view_key VARCHAR(40) NOT NULL,
-    rows_json LONGTEXT NOT NULL,
+    rows_json TEXT NOT NULL,
     updated_by INT NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY uq_business_dataset (company_id, module_key, view_key)
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_business_dataset UNIQUE (company_id, module_key, view_key)
   )`);
 }
 
@@ -66,7 +66,8 @@ async function saveDataset(user, body) {
   await pool.query(
     `INSERT INTO business_datasets (company_id, module_key, view_key, rows_json, updated_by)
      VALUES (?, ?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE rows_json = VALUES(rows_json), updated_by = VALUES(updated_by), updated_at = CURRENT_TIMESTAMP`,
+     ON CONFLICT (company_id, module_key, view_key) DO UPDATE
+     SET rows_json = EXCLUDED.rows_json, updated_by = EXCLUDED.updated_by, updated_at = CURRENT_TIMESTAMP`,
     [companyId, moduleKey, viewKey, JSON.stringify(rows), user.id]
   );
   return { saved: true, companyId, rows };

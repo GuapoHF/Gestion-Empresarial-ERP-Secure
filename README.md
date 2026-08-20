@@ -1,17 +1,84 @@
-# Gestion Empresarial
+# Gestión Empresarial
 
-Sistema web multiempresa para Vicmar y Grupo Cirsa en Honduras, y Telas Olímpica en México. Incluye registro sujeto a aprobacion, sesiones seguras, operaciones por empresa y documentos contables imprimibles.
+Sistema web multiempresa para Vicmar, Grupo Cirsa y Telas Olímpica. El backend Node.js sirve el frontend y guarda autenticación, empleados, operaciones y reportes en **Supabase PostgreSQL**.
 
 ## Requisitos
 
 - Node.js 18 o superior.
-- MySQL o MariaDB. XAMPP funciona con su configuracion predeterminada.
+- Un proyecto de Supabase.
+- La contraseña de la base de datos del proyecto (no la clave `anon`).
 
-## Instalacion local
+## Conectar Supabase paso a paso
 
-1. Inicia MySQL desde XAMPP.
-2. Crea la base ejecutando `SRC/Backend/database/schema.sql` en phpMyAdmin o en el cliente MySQL.
-3. Instala y arranca el backend:
+### 1. Crear el proyecto
+
+1. Inicia sesión en [Supabase](https://supabase.com/dashboard) y selecciona **New project**.
+2. Elige la organización, nombre y región más cercana al servidor donde desplegarás la API.
+3. Define una contraseña robusta para PostgreSQL y guárdala en un gestor de contraseñas.
+4. Espera a que el proyecto termine de aprovisionarse.
+
+> Esta aplicación conserva su autenticación propia (usuarios aprobados, sesiones y permisos). No requiere activar Supabase Auth.
+
+### 2. Crear las tablas con SQL
+
+1. En el panel del proyecto abre **SQL Editor** y pulsa **New query**.
+2. Copia **todo** el contenido de [`SRC/Backend/database/schema.sql`](SRC/Backend/database/schema.sql).
+3. Pulsa **Run**. El script es idempotente: usa `IF NOT EXISTS` y `ON CONFLICT`, por lo que se puede volver a ejecutar.
+4. Abre **Table Editor** y comprueba que existan, entre otras, `companies`, `users`, `auth_sessions`, `employees` y `business_datasets`.
+5. En `companies` deben aparecer Vicmar, Telas Olímpica y Grupo Cirsa.
+
+El script crea tablas, restricciones, índices y las tres empresas iniciales. Las migraciones defensivas del backend también crean cualquier tabla faltante al arrancar.
+
+### 3. Obtener la URI correcta
+
+1. Ve a **Project Settings > Database** y localiza **Connection string**.
+2. Selecciona formato **URI** y copia la cadena.
+3. Sustituye el marcador de contraseña por la contraseña de PostgreSQL.
+
+Para desarrollo local o un servidor con IPv6 se puede usar la conexión directa (puerto `5432`). Si la red solo soporta IPv4 o el despliegue es serverless, usa **Transaction pooler** (normalmente puerto `6543`). En el pooler el usuario suele incluir la referencia del proyecto, por ejemplo `postgres.PROJECT_REF`.
+
+Si la contraseña contiene `@`, `:`, `/`, `#`, `%` u otros caracteres reservados, codifícala para URL. Por ejemplo, en Node:
+
+```bash
+node -p "encodeURIComponent('TU CONTRASEÑA')"
+```
+
+### 4. Configurar las variables
+
+Desde la raíz del repositorio:
+
+```bash
+cp SRC/Backend/.env.example SRC/Backend/.env
+```
+
+Edita `SRC/Backend/.env`:
+
+```dotenv
+SUPABASE_DB_URL=postgresql://postgres.PROJECT_REF:CONTRASENA_CODIFICADA@aws-0-REGION.pooler.supabase.com:6543/postgres
+DB_SSL=true
+DB_POOL_MAX=10
+PORT=3000
+NODE_ENV=development
+```
+
+- `SUPABASE_DB_URL` es la URI PostgreSQL del paso anterior. También se acepta `DATABASE_URL`.
+- `DB_SSL=true` es lo recomendado para Supabase.
+- `DB_POOL_MAX` limita las conexiones simultáneas del proceso.
+- `.env` está ignorado por Git. **Nunca** pongas la URI, la contraseña de PostgreSQL ni una `service_role` en el frontend o en un commit.
+
+En producción configura estas variables en el panel del proveedor de hosting, en lugar de subir `.env`. Para crear el primer administrador define temporalmente:
+
+```dotenv
+NODE_ENV=production
+BOOTSTRAP_ADMIN_EMAIL=admin@tu-dominio.com
+BOOTSTRAP_ADMIN_USERNAME=administrador
+BOOTSTRAP_ADMIN_PASSWORD=una-clave-segura-123
+APP_ORIGIN=https://tu-dominio.com
+```
+
+La contraseña debe tener de 12 a 72 caracteres, al menos una letra y un número. Arranca una vez, verifica la cuenta y retira las tres variables `BOOTSTRAP_ADMIN_*` del entorno.
+
+### 5. Instalar y arrancar
 
 ```bash
 cd SRC/Backend
@@ -19,50 +86,47 @@ npm install
 npm start
 ```
 
-4. Abre `http://localhost:3000/index.html`.
+Abre `http://localhost:3000`. No abras los HTML mediante `file://` ni desde otro servidor: el frontend consume `/api` en el mismo origen.
 
-El servidor tambien ejecuta migraciones compatibles al iniciar, por lo que conserva y actualiza una base creada por versiones anteriores.
+En desarrollo, si no existe un administrador activo, el backend crea la cuenta de demostración `administrador` / `Admin12345678`. No se crea automáticamente en producción.
 
-## Configuracion
+### 6. Verificar la conexión
 
-La conexion predeterminada usa `localhost:3306`, usuario `root`, contrasena vacia y base `textiles_db`. Se puede cambiar con `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` y `PORT`.
+Con el servidor activo ejecuta:
 
-En desarrollo, si todavia no existe un administrador global activo, el backend crea automaticamente esta cuenta de pruebas al arrancar:
+```bash
+curl http://localhost:3000/api/companies
+```
 
-- Usuario: `administrador`
-- Contrasena: `Admin12345678`
-- Correo: `administrador@vicmar.hn`
+Debe responder JSON con las tres empresas. El endpoint `/api/health` solo comprueba el proceso; `/api/companies` también obliga a consultar PostgreSQL y por eso es la prueba real de conexión.
 
-La cuenta permite revisar todas las empresas y secciones, ademas de aprobar las solicitudes de registro. Solo se crea si `NODE_ENV` no es `production` y no reemplaza una cuenta administradora existente.
+Si falla:
 
-Para personalizar las credenciales se pueden definir `BOOTSTRAP_ADMIN_PASSWORD`, `BOOTSTRAP_ADMIN_EMAIL` y `BOOTSTRAP_ADMIN_USERNAME`. La contrasena inicial debe tener al menos 12 caracteres, una letra y un numero. En produccion no hay credenciales predeterminadas: estas variables son obligatorias para crear el primer administrador y pueden retirarse despues del primer arranque.
+- `Falta SUPABASE_DB_URL`: confirma que el archivo se llama exactamente `SRC/Backend/.env`.
+- `password authentication failed`: revisa la contraseña, el usuario del pooler y la codificación URL.
+- `getaddrinfo` o timeout: prueba el pooler IPv4, revisa la región/host y que el proyecto no esté pausado.
+- `relation ... does not exist`: vuelve a ejecutar `schema.sql` en SQL Editor y confirma que usaste el proyecto correcto.
+- `too many connections`: usa el pooler y reduce `DB_POOL_MAX`.
 
-El frontend debe abrirse desde `http://localhost:3000`; abrir los HTML directamente o desde otro servidor impide que las solicitudes lleguen a `/api`.
+## Correo de recuperación
 
-Para recuperacion por correo se aceptan `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` y `SMTP_STARTTLS`. Sin SMTP, el enlace de recuperacion se muestra en la consola local.
+Se aceptan `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` y `SMTP_STARTTLS`. Sin SMTP, el enlace de recuperación se muestra en la consola local.
 
-## Flujo multiempresa
+## Seguridad y arquitectura
 
-- El registro exige empresa, area solicitada, correo valido, usuario unico y contrasena de al menos ocho caracteres con letras y numeros.
-- La solicitud queda pendiente hasta que el administrador global la aprueba o rechaza.
-- Los usuarios aprobados solo consultan y modifican los datos de su empresa.
-- Cada rol solo puede abrir y modificar sus modulos autorizados; el servidor vuelve a comprobar el permiso en cada solicitud.
-- El administrador puede filtrar solicitudes y reportes por cualquiera de las tres empresas.
-- El administrador puede registrar, editar y eliminar empleados con confirmacion explicita. Cada usuario puede eliminar su propia cuenta verificando su contrasena.
-- Vicmar y Grupo Cirsa operan con HNL, RTN, ISV, SAR, IHSS y RAP; Telas Olímpica opera con MXN, RFC, IVA, SAT, IMSS, INFONAVIT y FONACOT.
-- Las contrasenas se almacenan con `scrypt` y las sesiones expiran automaticamente.
-
-## Contabilidad
-
-Desde `Contabilidad > Estados Financieros` se generan Estado de resultados, Balance general, Balanza de comprobacion, Catalogo de percepciones y deducciones, Ventas y utilidad y Factura de compra. Los documentos extensos se paginan automaticamente y todos pueden imprimirse como PDF o exportarse a CSV.
+- El navegador solo llama al backend Node.js; la URI de PostgreSQL permanece en el servidor.
+- Las contraseñas se almacenan con `scrypt` y las sesiones expiran automáticamente.
+- Los permisos multiempresa y por módulo se vuelven a comprobar en cada solicitud.
+- No es necesario desactivar RLS para el cliente porque este proyecto no consulta tablas directamente con `supabase-js`. Si después se agrega acceso directo desde el navegador, deben habilitarse RLS y políticas específicas antes de exponer cualquier tabla.
+- Rota inmediatamente la contraseña de la base si una URI real se publica por accidente.
 
 ## Estructura principal
 
 ```text
 SRC/
 |-- Backend/
-|   |-- config/       Conexion, correo, autenticacion y migraciones
-|   |-- database/     Esquema MySQL
+|   |-- config/       Conexión PostgreSQL, correo, autenticación y migraciones
+|   |-- database/     Esquema PostgreSQL para Supabase
 |   |-- modules/      Datos operativos y reportes contables
 |   `-- server.js     API y servidor del frontend
 `-- Frontend/

@@ -167,25 +167,14 @@ function validateRegistration(userData) {
   return { firstName, lastName, email, username, password, role };
 }
 
-async function columnExists(tableName, columnName) {
-  const [rows] = await pool.query(
-    `SELECT 1 FROM information_schema.COLUMNS
-     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ? LIMIT 1`,
-    [tableName, columnName]
-  );
-  return rows.length > 0;
-}
-
 async function addColumn(tableName, definition) {
-  const columnName = definition.trim().split(/\s+/)[0].replace(/`/g, "");
-  if (!(await columnExists(tableName, columnName))) {
-    await pool.query(`ALTER TABLE \`${tableName}\` ADD COLUMN ${definition}`);
-  }
+  const portableDefinition = definition.replace(/\s+AFTER\s+\w+$/i, "");
+  await pool.query(`ALTER TABLE ${tableName} ADD COLUMN IF NOT EXISTS ${portableDefinition}`);
 }
 
 async function ensureAuthTables() {
   await pool.query(`CREATE TABLE IF NOT EXISTS companies (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     code VARCHAR(50) NOT NULL UNIQUE,
     name VARCHAR(160) NOT NULL UNIQUE,
     legal_name VARCHAR(200) NOT NULL,
@@ -199,7 +188,7 @@ async function ensureAuthTables() {
     tax_id VARCHAR(40) NOT NULL DEFAULT '',
     tax_rate DECIMAL(5,2) NOT NULL DEFAULT 15,
     city VARCHAR(120) NOT NULL DEFAULT 'Tegucigalpa',
-    active TINYINT(1) NOT NULL DEFAULT 1,
+    active SMALLINT NOT NULL DEFAULT 1,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`);
   await addColumn("companies", "country_code CHAR(2) NOT NULL DEFAULT 'HN' AFTER rtn");
@@ -212,7 +201,7 @@ async function ensureAuthTables() {
   await addColumn("companies", "tax_rate DECIMAL(5,2) NOT NULL DEFAULT 15 AFTER tax_id");
   await addColumn("companies", "city VARCHAR(120) NOT NULL DEFAULT 'Tegucigalpa' AFTER tax_rate");
   for (const company of COMPANIES) {
-    const [existing] = await pool.query("SELECT id FROM companies WHERE code IN (?, ?) ORDER BY code = ? DESC LIMIT 1", [company.code, company.legacyCode, company.code]);
+    const [existing] = await pool.query("SELECT id FROM companies WHERE code IN (?, ?) ORDER BY CASE WHEN code = ? THEN 0 ELSE 1 END LIMIT 1", [company.code, company.legacyCode, company.code]);
     if (existing.length) {
       await pool.query(
         `UPDATE companies SET code = ?, name = ?, legal_name = ?, rtn = ?, country_code = ?, country_name = ?, locale = ?,
@@ -230,7 +219,7 @@ async function ensureAuthTables() {
   }
 
   await pool.query(`CREATE TABLE IF NOT EXISTS users (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     first_name VARCHAR(120) NOT NULL,
     last_name VARCHAR(120) NOT NULL,
     second_last_name VARCHAR(120),
@@ -241,17 +230,17 @@ async function ensureAuthTables() {
     company VARCHAR(160),
     company_id INT,
     role VARCHAR(40) NOT NULL DEFAULT 'Empleado',
-    is_global_admin TINYINT(1) NOT NULL DEFAULT 0,
+    is_global_admin SMALLINT NOT NULL DEFAULT 0,
     status VARCHAR(30) NOT NULL DEFAULT 'Activo',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`);
   await addColumn("users", "password_hash VARCHAR(255) NULL AFTER password");
   await addColumn("users", "company_id INT NULL AFTER company");
-  await addColumn("users", "is_global_admin TINYINT(1) NOT NULL DEFAULT 0 AFTER role");
+  await addColumn("users", "is_global_admin SMALLINT NOT NULL DEFAULT 0 AFTER role");
   await addColumn("users", "status VARCHAR(30) NOT NULL DEFAULT 'Activo' AFTER is_global_admin");
 
   await pool.query(`CREATE TABLE IF NOT EXISTS registration_requests (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     first_name VARCHAR(120) NOT NULL,
     last_name VARCHAR(120) NOT NULL,
     second_last_name VARCHAR(120),
@@ -264,50 +253,46 @@ async function ensureAuthTables() {
     role VARCHAR(40) NOT NULL DEFAULT 'Empleado',
     status VARCHAR(30) NOT NULL DEFAULT 'Pendiente',
     decided_by INT NULL,
-    decided_at DATETIME NULL,
+    decided_at TIMESTAMP NULL,
     rejection_reason VARCHAR(300) NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_registration_status_company (status, company_id)
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`);
   await addColumn("registration_requests", "password_hash VARCHAR(255) NULL AFTER password");
   await addColumn("registration_requests", "company_id INT NULL AFTER company");
   await addColumn("registration_requests", "decided_by INT NULL AFTER status");
-  await addColumn("registration_requests", "decided_at DATETIME NULL AFTER decided_by");
+  await addColumn("registration_requests", "decided_at TIMESTAMP NULL AFTER decided_by");
   await addColumn("registration_requests", "rejection_reason VARCHAR(300) NULL AFTER decided_at");
 
   await pool.query(`CREATE TABLE IF NOT EXISTS auth_sessions (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     user_id INT NOT NULL,
     token_hash CHAR(64) NOT NULL UNIQUE,
-    expires_at DATETIME NOT NULL,
-    revoked_at DATETIME NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_auth_sessions_user (user_id, expires_at)
+    expires_at TIMESTAMP NOT NULL,
+    revoked_at TIMESTAMP NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`);
   await pool.query(`CREATE TABLE IF NOT EXISTS password_recovery_tokens (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     user_id INT NOT NULL,
     token VARCHAR(120) NOT NULL UNIQUE,
-    expires_at DATETIME NOT NULL,
-    used_at DATETIME NULL,
+    expires_at TIMESTAMP NOT NULL,
+    used_at TIMESTAMP NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`);
 
   const [defaultCompany] = await pool.query("SELECT id, name FROM companies WHERE code = 'VICMAR_HN' LIMIT 1");
   await pool.query(
-    `UPDATE users u LEFT JOIN companies c ON c.name = u.company
-     SET u.company_id = COALESCE(u.company_id, c.id, ?), u.company = COALESCE(c.name, u.company, ?)
-     WHERE u.company_id IS NULL`,
+    `UPDATE users u SET company_id = COALESCE(u.company_id, c.id, ?), company = COALESCE(c.name, u.company, ?)
+     FROM companies c WHERE c.name = u.company AND u.company_id IS NULL`,
     [defaultCompany[0].id, defaultCompany[0].name]
   );
   await pool.query(
-    `UPDATE registration_requests r LEFT JOIN companies c ON c.name = r.company
-     SET r.company_id = COALESCE(r.company_id, c.id, ?), r.company = COALESCE(c.name, r.company, ?)
-     WHERE r.company_id IS NULL`,
+    `UPDATE registration_requests r SET company_id = COALESCE(r.company_id, c.id, ?), company = COALESCE(c.name, r.company, ?)
+     FROM companies c WHERE c.name = r.company AND r.company_id IS NULL`,
     [defaultCompany[0].id, defaultCompany[0].name]
   );
-  await pool.query("UPDATE users u JOIN companies c ON c.id = u.company_id SET u.company = c.name");
-  await pool.query("UPDATE registration_requests r JOIN companies c ON c.id = r.company_id SET r.company = c.name");
+  await pool.query("UPDATE users u SET company = c.name FROM companies c WHERE c.id = u.company_id");
+  await pool.query("UPDATE registration_requests r SET company = c.name FROM companies c WHERE c.id = r.company_id");
 
   const [globalAdmins] = await pool.query("SELECT id FROM users WHERE is_global_admin = 1 AND status = 'Activo' LIMIT 1");
   const allowDevelopmentAdmin = process.env.NODE_ENV !== "production";
@@ -329,7 +314,7 @@ async function ensureAuthTables() {
 
 async function listCompanies() {
   await ensureAuthTables();
-  const [rows] = await pool.query("SELECT * FROM companies WHERE active = 1 ORDER BY FIELD(code, 'VICMAR_HN', 'TELAS_OLIMPICA_MX', 'GRUPO_CIRSA_HN')");
+  const [rows] = await pool.query("SELECT * FROM companies WHERE active = 1 ORDER BY CASE code WHEN 'VICMAR_HN' THEN 1 WHEN 'TELAS_OLIMPICA_MX' THEN 2 WHEN 'GRUPO_CIRSA_HN' THEN 3 ELSE 4 END");
   return rows.map(publicCompany);
 }
 
