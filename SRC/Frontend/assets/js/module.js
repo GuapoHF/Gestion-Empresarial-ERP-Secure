@@ -42,10 +42,21 @@ let posCart = [];
 
 function rowsStorageKey(moduleKey, viewKey) { return `textiles-gh-${moduleKey}-${viewKey}-rows`; }
 
+function normalizeDatasetRows(moduleKey, viewKey, datasetRows) {
+  if (moduleKey !== "ventas" || viewKey !== "cotizaciones") return datasetRows;
+  return datasetRows.map((row) => {
+    if (row.length !== 6) return row;
+    const normalized = [...row];
+    normalized[0] = normalized[0].replace(/^COT-/, "PRO-");
+    normalized.splice(5, 0, "Exento");
+    return normalized;
+  });
+}
+
 function loadRows(moduleKey, viewKey, defaults = []) {
   try {
     const saved = JSON.parse(localStorage.getItem(rowsStorageKey(moduleKey, viewKey)));
-    return Array.isArray(saved) ? saved : defaults.map((row) => [...row]);
+    return normalizeDatasetRows(moduleKey, viewKey, Array.isArray(saved) ? saved : defaults.map((row) => [...row]));
   } catch (error) {
     return defaults.map((row) => [...row]);
   }
@@ -64,7 +75,7 @@ async function syncDataset() {
   try {
     const dataset = await window.gestionUserDb.getDataset(currentKey, currentViewKey);
     if (dataset.initialized) {
-      rows = dataset.rows;
+      rows = normalizeDatasetRows(currentKey, currentViewKey, dataset.rows);
       localStorage.setItem(storageKey, JSON.stringify(rows));
     } else {
       await window.gestionUserDb.saveDataset(currentKey, currentViewKey, rows);
@@ -455,12 +466,20 @@ function normalizeInputValue(value, type) {
 
 function buildForm(row = []) {
   formFields.innerHTML = currentView.fields.map(([label, type, option], index) => {
-    const value = normalizeInputValue(row[index] || "", type);
+    const generatedValue = editIndex === null ? automaticFieldValue(index) : "";
+    const value = normalizeInputValue(row[index] || generatedValue, type);
     if (type === "select") {
       return `<label class="field"><span>${escapeHtml(localizeBusinessText(label))}</span><select name="field-${index}" required>${option.map((item) => `<option value="${escapeHtml(item)}"${item === value ? " selected" : ""}>${escapeHtml(localizeBusinessText(item))}</option>`).join("")}</select></label>`;
     }
-    return `<label class="field"><span>${escapeHtml(localizeBusinessText(label))}</span><input name="field-${index}" type="${escapeHtml(type)}" value="${escapeHtml(value)}" placeholder="${escapeHtml(localizeBusinessText(option))}" required /></label>`;
+    const isAutomatic = currentView.autoNumber?.index === index || currentView.autoCorrelative?.index === index;
+    const isClient = currentKey === "ventas" && /^cliente$/i.test(label);
+    const list = isClient ? ' list="sales-client-list" autocomplete="off"' : "";
+    return `<label class="field"><span>${escapeHtml(localizeBusinessText(label))}</span><input name="field-${index}" type="${escapeHtml(type)}" value="${escapeHtml(value)}" placeholder="${escapeHtml(localizeBusinessText(option))}"${list}${isAutomatic ? ' readonly aria-readonly="true"' : ""} required /></label>`;
   }).join("");
+  if (currentKey === "ventas" && currentView.fields.some(([label]) => /^cliente$/i.test(label))) {
+    const clientNames = moduleRows("ventas", "clientes").map((client) => client[1]).filter(Boolean);
+    formFields.insertAdjacentHTML("beforeend", `<datalist id="sales-client-list">${clientNames.map((name) => `<option value="${escapeHtml(name)}"></option>`).join("")}</datalist>`);
+  }
 }
 
 function openForm(index = null) {
@@ -514,28 +533,65 @@ function renderAccountingHub() {
     <a class="accounting-document-card" href="./reportes-contables.html?tipo=${type}"><span>Documento contable</span><h2>${title}</h2><p>${description}</p><strong>Generar documento &gt;</strong></a>`).join("")}</div>`;
 }
 
-function nextNumber(prefix) {
-  return `${prefix}-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`;
+function sequentialNumber(definition, sourceRows = rows) {
+  const year = new Date().getFullYear();
+  const prefixes = [definition.prefix, ...(definition.aliases || [])];
+  const highest = sourceRows.reduce((maximum, row) => {
+    const value = String(row[definition.index ?? 0] || "");
+    const matchesPrefix = prefixes.some((prefix) => value.startsWith(`${prefix}-`));
+    if (!matchesPrefix) return maximum;
+    const match = value.match(/(\d+)$/);
+    return match ? Math.max(maximum, Number(match[1])) : maximum;
+  }, 0);
+  const sequence = String(highest + 1).padStart(definition.digits, "0");
+  return definition.year ? `${definition.prefix}-${year}-${sequence}` : `${definition.prefix}-${sequence}`;
+}
+
+function automaticFieldValue(index) {
+  if (currentView.autoNumber?.index === index) return sequentialNumber(currentView.autoNumber);
+  if (currentView.autoCorrelative?.index === index) {
+    const source = sequentialNumber(currentView.autoNumber);
+    const sequence = source.match(/(\d+)$/)?.[1] || "1";
+    return `${currentView.autoCorrelative.prefix}-${sequence.padStart(currentView.autoCorrelative.digits, "0")}`;
+  }
+  return "";
+}
+
+async function nextTargetDocument(moduleKey, viewKey) {
+  const targetView = modules[moduleKey].views[viewKey];
+  let targetRows = loadRows(moduleKey, viewKey, targetView.rows || []);
+  try {
+    const dataset = await window.gestionUserDb.getDataset(moduleKey, viewKey);
+    if (dataset.initialized) targetRows = normalizeDatasetRows(moduleKey, viewKey, dataset.rows);
+  } catch (error) {
+    // Generate from the synchronized local copy while the server is unavailable.
+  }
+  const documentNumber = sequentialNumber(targetView.autoNumber, targetRows);
+  return { targetView, documentNumber };
 }
 
 async function runWorkflow(index) {
   const row = rows[index];
   const type = currentView.workflow.type;
   if (type === "requisition-to-order") {
-    await appendTargetRow("compras", "ordenes", [nextNumber("OC"), "Proveedor por asignar", row[2], row[3], "L 0", "Borrador"]);
+    await appendTargetRow("compras", "ordenes", [`OC-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`, "Proveedor por asignar", row[2], row[3], "L 0", "Borrador"]);
     navigate("compras", "ordenes");
   } else if (type === "order-to-receipt") {
-    await appendTargetRow("compras", "recepciones", [nextNumber("REC"), row[0], row[1], "Lote por capturar", "0 m", "0 m", "Pendiente"]);
+    await appendTargetRow("compras", "recepciones", [`REC-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`, row[0], row[1], "Lote por capturar", "0 m", "0 m", "Pendiente"]);
     navigate("compras", "recepciones");
   } else if (type === "receipt-to-stock") {
     sessionStorage.setItem("textiles-gh-flash", `${row[0]} ingresada al inventario.`);
     window.location.href = "./inventario.html";
   } else if (type === "quote-to-order") {
-    await appendTargetRow("ventas", "pedidos", [nextNumber("PED"), row[1], row[2], row[3], row[4], "Pendiente"]);
+    const { documentNumber } = await nextTargetDocument("ventas", "pedidos");
+    await appendTargetRow("ventas", "pedidos", [documentNumber, row[1], row[2], row[3], row[4], "Pendiente"]);
     navigate("ventas", "pedidos");
   } else if (type === "order-to-invoice") {
     const today = new Intl.DateTimeFormat(moduleSessionUser.locale || "es-HN", { day: "numeric", month: "short", year: "numeric" }).format(new Date()).replace(".", "");
-    await appendTargetRow("ventas", "facturas", [nextNumber("FAC"), row[1], "Correlativo por asignar", today, row[4], "Borrador"]);
+    const { targetView, documentNumber } = await nextTargetDocument("ventas", "facturas");
+    const sequence = documentNumber.match(/(\d+)$/)?.[1] || "1";
+    const correlative = `${targetView.autoCorrelative.prefix}-${sequence.padStart(targetView.autoCorrelative.digits, "0")}`;
+    await appendTargetRow("ventas", "facturas", [documentNumber, row[1], correlative, today, row[4], "Borrador"]);
     navigate("ventas", "facturas");
   } else if (type === "invoice-to-payment") {
     await appendTargetRow("ventas", "cobranza", [row[0], row[1], row[3], row[4], row[4], "0-15 dias", "Por vencer"]);
