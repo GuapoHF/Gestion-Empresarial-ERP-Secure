@@ -90,6 +90,15 @@ CREATE TABLE IF NOT EXISTS business_datasets (
     )
 );
 
+CREATE TABLE IF NOT EXISTS business_serial_sequences (
+    company_id INT NOT NULL,
+    module_key VARCHAR(40) NOT NULL,
+    view_key VARCHAR(40) NOT NULL,
+    next_value BIGINT NOT NULL DEFAULT 1,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (company_id, module_key, view_key)
+);
+
 CREATE TABLE IF NOT EXISTS employees (
     id BIGSERIAL PRIMARY KEY,
     company_id INT NOT NULL,

@@ -32,6 +32,54 @@ async function ensureRecordsTable() {
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT uq_business_dataset UNIQUE (company_id, module_key, view_key)
   )`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS business_serial_sequences (
+    company_id INT NOT NULL, module_key VARCHAR(40) NOT NULL, view_key VARCHAR(40) NOT NULL,
+    next_value BIGINT NOT NULL DEFAULT 1, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (company_id, module_key, view_key)
+  )`);
+}
+
+function serialPrefix(moduleKey, viewKey) {
+  const part = (value) => value.replace(/[^a-z0-9]/gi, "").slice(0, 3).toUpperCase().padEnd(3, "X");
+  return `SER-${part(moduleKey)}-${part(viewKey)}-`;
+}
+
+async function assignSerialNumbers(connection, companyId, moduleKey, viewKey, rows) {
+  const prefix = serialPrefix(moduleKey, viewKey);
+  await connection.query(
+    `INSERT INTO business_serial_sequences (company_id, module_key, view_key, next_value)
+     VALUES (?, ?, ?, 1) ON CONFLICT (company_id, module_key, view_key) DO NOTHING RETURNING next_value`,
+    [companyId, moduleKey, viewKey]
+  );
+  const [sequences] = await connection.query(
+    `SELECT next_value FROM business_serial_sequences
+     WHERE company_id = ? AND module_key = ? AND view_key = ? FOR UPDATE`,
+    [companyId, moduleKey, viewKey]
+  );
+  let nextValue = Number(sequences[0].next_value);
+  const used = new Set();
+  const numberedRows = rows.map((row) => {
+    const values = [...row];
+    const candidate = String(values.at(-1) || "");
+    if (new RegExp(`^${prefix}\\d{6,}$`).test(candidate) && !used.has(candidate)) {
+      used.add(candidate);
+      const value = Number(candidate.slice(prefix.length));
+      if (Number.isSafeInteger(value)) nextValue = Math.max(nextValue, value + 1);
+      return values;
+    }
+    const serial = `${prefix}${String(nextValue).padStart(6, "0")}`;
+    nextValue += 1;
+    used.add(serial);
+    if (candidate === "Asignando...") values.pop();
+    values.push(serial);
+    return values;
+  });
+  await connection.query(
+    `UPDATE business_serial_sequences SET next_value = ?, updated_at = CURRENT_TIMESTAMP
+     WHERE company_id = ? AND module_key = ? AND view_key = ?`,
+    [nextValue, companyId, moduleKey, viewKey]
+  );
+  return numberedRows;
 }
 
 async function getDataset(user, query) {
@@ -59,17 +107,29 @@ async function saveDataset(user, body) {
   const companyId = resolveCompanyId(user, body.companyId);
   await assertActiveCompany(companyId);
   if (!Array.isArray(body.rows) || body.rows.length > 2000) throw new Error("El conjunto de registros no es valido.");
-  const rows = body.rows.map((row) => {
+  const submittedRows = body.rows.map((row) => {
     if (!Array.isArray(row) || row.length > 30) throw new Error("Uno de los registros no tiene el formato esperado.");
     return row.map((value) => String(value ?? "").slice(0, 500));
   });
-  await pool.query(
-    `INSERT INTO business_datasets (company_id, module_key, view_key, rows_json, updated_by)
-     VALUES (?, ?, ?, ?, ?)
-     ON CONFLICT (company_id, module_key, view_key) DO UPDATE
-     SET rows_json = EXCLUDED.rows_json, updated_by = EXCLUDED.updated_by, updated_at = CURRENT_TIMESTAMP`,
-    [companyId, moduleKey, viewKey, JSON.stringify(rows), user.id]
-  );
+  const connection = await pool.getConnection();
+  let rows;
+  try {
+    await connection.beginTransaction();
+    rows = await assignSerialNumbers(connection, companyId, moduleKey, viewKey, submittedRows);
+    await connection.query(
+      `INSERT INTO business_datasets (company_id, module_key, view_key, rows_json, updated_by)
+       VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT (company_id, module_key, view_key) DO UPDATE
+       SET rows_json = EXCLUDED.rows_json, updated_by = EXCLUDED.updated_by, updated_at = CURRENT_TIMESTAMP`,
+      [companyId, moduleKey, viewKey, JSON.stringify(rows), user.id]
+    );
+    await connection.commit();
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
   return { saved: true, companyId, rows };
 }
 

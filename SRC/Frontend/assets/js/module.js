@@ -36,7 +36,14 @@ const form = document.querySelector("#module-form");
 const formFields = document.querySelector("#module-form-fields");
 const formError = document.querySelector("#module-form-error");
 const toast = document.querySelector("#module-toast");
-let rows = loadRows(currentKey, currentViewKey, currentView.rows || []);
+
+function rowsWithSerialPlaceholder(datasetRows, viewDefinition = currentView) {
+  if (!viewDefinition.columns) return datasetRows;
+  const expectedDataColumns = viewDefinition.columns.length;
+  return datasetRows.map((row) => row.length >= expectedDataColumns ? row : [...row, "Asignando..."]);
+}
+
+let rows = rowsWithSerialPlaceholder(loadRows(currentKey, currentViewKey, currentView.rows || []));
 let editIndex = null;
 let posCart = [];
 let posTaxName = moduleSessionUser.countryCode === "MX" ? "IVA" : "ISV";
@@ -67,7 +74,10 @@ function loadRows(moduleKey, viewKey, defaults = []) {
 async function saveRows() {
   localStorage.setItem(storageKey, JSON.stringify(rows));
   try {
-    await window.gestionUserDb.saveDataset(currentKey, currentViewKey, rows);
+    const saved = await window.gestionUserDb.saveDataset(currentKey, currentViewKey, rows);
+    rows = rowsWithSerialPlaceholder(saved.rows);
+    localStorage.setItem(storageKey, JSON.stringify(rows));
+    refreshDataView();
   } catch (error) {
     showToast(`${error.message} Los cambios quedaron guardados solo en este navegador.`);
   }
@@ -77,10 +87,16 @@ async function syncDataset() {
   try {
     const dataset = await window.gestionUserDb.getDataset(currentKey, currentViewKey);
     if (dataset.initialized) {
-      rows = normalizeDatasetRows(currentKey, currentViewKey, dataset.rows);
+      rows = rowsWithSerialPlaceholder(normalizeDatasetRows(currentKey, currentViewKey, dataset.rows));
+      if (rows.some((row) => row.at(-1) === "Asignando...")) {
+        const saved = await window.gestionUserDb.saveDataset(currentKey, currentViewKey, rows);
+        rows = rowsWithSerialPlaceholder(saved.rows);
+      }
       localStorage.setItem(storageKey, JSON.stringify(rows));
     } else {
-      await window.gestionUserDb.saveDataset(currentKey, currentViewKey, rows);
+      const saved = await window.gestionUserDb.saveDataset(currentKey, currentViewKey, rows);
+      rows = rowsWithSerialPlaceholder(saved.rows);
+      localStorage.setItem(storageKey, JSON.stringify(rows));
     }
     if (typeof currentView.metrics === "string") {
       const relatedDatasets = metricDependencies(currentView.metrics).filter(([moduleKey, viewKey]) => moduleKey !== currentKey || viewKey !== currentViewKey);
@@ -339,8 +355,10 @@ function renderTable() {
     const cells = row.map((cell, cellIndex) => `<span>${cellIndex === statusIndex ? `<b class="status ${statusClass(cell)}">${escapeHtml(localizeBusinessText(cell))}</b>` : escapeHtml(localizeBusinessText(cell))}</span>`).join("");
     return `<div class="module-table-row" data-row-index="${index}">${cells}${renderActions(index)}</div>`;
   }).join("");
-  view.innerHTML = `<div class="module-table-wrap"><div class="module-table" style="--columns:${currentView.columns.length}">
-    <div class="module-table-row module-table-head">${currentView.columns.map((column) => `<span>${escapeHtml(localizeBusinessText(column))}</span>`).join("")}</div>${body}</div>
+  const displayColumns = [...currentView.columns];
+  displayColumns.splice(-1, 0, "No. de serie");
+  view.innerHTML = `<div class="module-table-wrap"><div class="module-table" style="--columns:${displayColumns.length}">
+    <div class="module-table-row module-table-head">${displayColumns.map((column) => `<span>${escapeHtml(localizeBusinessText(column))}</span>`).join("")}</div>${body}</div>
     ${visibleRows.length ? "" : '<p class="module-empty-state">No hay registros que coincidan con la busqueda.</p>'}</div>`;
 }
 
@@ -530,9 +548,10 @@ async function appendTargetRow(moduleKey, viewKey, row) {
   } catch (error) {
     // The local copy remains available if the server is temporarily unavailable.
   }
-  targetRows.unshift(row);
+  targetRows.unshift([...row, "Asignando..."]);
   localStorage.setItem(rowsStorageKey(moduleKey, viewKey), JSON.stringify(targetRows));
-  await window.gestionUserDb.saveDataset(moduleKey, viewKey, targetRows);
+  const saved = await window.gestionUserDb.saveDataset(moduleKey, viewKey, targetRows);
+  localStorage.setItem(rowsStorageKey(moduleKey, viewKey), JSON.stringify(saved.rows));
 }
 
 function renderAccountingHub() {
@@ -709,6 +728,7 @@ form.addEventListener("submit", async (event) => {
   const wasEditing = editIndex !== null;
   const data = new FormData(form);
   const values = currentView.fields.map(([, type], index) => formatFieldValue(data.get(`field-${index}`), type));
+  values.push(wasEditing ? rows[editIndex].at(-1) : "Asignando...");
   if (wasEditing) rows[editIndex] = values;
   else rows.unshift(values);
   closeForm();
