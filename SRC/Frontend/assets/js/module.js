@@ -39,6 +39,8 @@ const toast = document.querySelector("#module-toast");
 let rows = loadRows(currentKey, currentViewKey, currentView.rows || []);
 let editIndex = null;
 let posCart = [];
+let posTaxName = moduleSessionUser.countryCode === "MX" ? "IVA" : "ISV";
+let posTaxRate = Number(moduleSessionUser.taxRate ?? 15);
 
 function rowsStorageKey(moduleKey, viewKey) { return `textiles-gh-${moduleKey}-${viewKey}-rows`; }
 
@@ -419,7 +421,7 @@ function renderPosProducts(products) {
 function renderPos() {
   toolbar.hidden = true;
   const subtotal = posCart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const taxRate = Number(moduleSessionUser.taxRate || 15);
+  const taxRate = Number.isFinite(posTaxRate) ? Math.min(100, Math.max(0, posTaxRate)) : 0;
   const tax = subtotal * (taxRate / 100);
   const total = subtotal + tax;
   view.innerHTML = `<div class="pos-layout"><section class="pos-products">
@@ -428,7 +430,9 @@ function renderPos() {
     <aside class="pos-cart"><div class="pos-cart-heading"><div><h2>Venta actual</h2><p>Folio POS-2026-0142</p></div><button type="button" data-pos="clear"${posCart.length ? "" : " disabled"}>Vaciar</button></div>
     <label class="pos-field"><span>Cliente</span><select><option>Publico general</option><option>Confecciones Atlas</option><option>Uniformes Rivera</option><option>Moda Centro</option></select></label>
     <div class="pos-cart-items">${posCart.length ? posCart.map((item) => `<div class="pos-cart-row"><div><strong>${escapeHtml(item.name)}</strong><small>${money(item.price)} / ${escapeHtml(item.unit)}</small></div><div class="pos-quantity"><button type="button" data-pos="decrease" data-id="${item.id}" aria-label="Reducir cantidad">-</button><span>${item.quantity}</span><button type="button" data-pos="increase" data-id="${item.id}" aria-label="Aumentar cantidad">+</button></div><strong>${money(item.price * item.quantity)}</strong></div>`).join("") : '<div class="pos-empty"><strong>Aun no hay productos</strong><span>Agrega telas desde el catalogo para iniciar la venta.</span></div>'}</div>
-    <div class="pos-summary"><div><span>Subtotal</span><strong>${money(subtotal)}</strong></div><div><span>${moduleSessionUser.countryCode === "MX" ? "IVA" : "ISV"} ${taxRate}%</span><strong>${money(tax)}</strong></div><div class="pos-total"><span>Total</span><strong>${money(total)}</strong></div></div>
+    <div class="pos-summary"><div><span>Subtotal</span><strong>${money(subtotal)}</strong></div>
+    <div class="pos-tax-editor"><label><span>Impuesto</span><input id="pos-tax-name" type="text" value="${escapeHtml(posTaxName)}" maxlength="30" placeholder="Nombre" aria-label="Nombre del impuesto" /></label><label><span>Porcentaje</span><span class="pos-tax-rate"><input id="pos-tax-rate" type="number" value="${taxRate}" min="0" max="100" step="0.01" aria-label="Porcentaje del impuesto" /><b>%</b></span></label></div>
+    <div><span id="pos-tax-label">${escapeHtml(posTaxName || "Impuesto")} ${taxRate}%</span><strong id="pos-tax-amount">${money(tax)}</strong></div><div class="pos-total"><span>Total</span><strong id="pos-total-amount">${money(total)}</strong></div></div>
     <label class="pos-field"><span>Forma de pago</span><select><option>Efectivo</option><option>Tarjeta</option><option>Transferencia</option><option>Credito autorizado</option></select></label>
     <button class="primary-action pos-complete" type="button" data-pos="complete"${posCart.length ? "" : " disabled"}>Cobrar y finalizar venta</button></aside></div>`;
   const posSearch = document.querySelector("#pos-search");
@@ -436,6 +440,19 @@ function renderPos() {
     const term = posSearch.value.toLowerCase().trim();
     document.querySelector("#pos-product-grid").innerHTML = renderPosProducts(posProducts.filter((product) => `${product.id} ${product.name}`.toLowerCase().includes(term)));
   });
+  const taxNameInput = document.querySelector("#pos-tax-name");
+  const taxRateInput = document.querySelector("#pos-tax-rate");
+  const updateTax = () => {
+    posTaxName = taxNameInput.value;
+    const enteredRate = Number(taxRateInput.value);
+    posTaxRate = Number.isFinite(enteredRate) ? Math.min(100, Math.max(0, enteredRate)) : 0;
+    const updatedTax = subtotal * (posTaxRate / 100);
+    document.querySelector("#pos-tax-label").textContent = `${posTaxName.trim() || "Impuesto"} ${posTaxRate}%`;
+    document.querySelector("#pos-tax-amount").textContent = money(updatedTax);
+    document.querySelector("#pos-total-amount").textContent = money(subtotal + updatedTax);
+  };
+  taxNameInput.addEventListener("input", updateTax);
+  taxRateInput.addEventListener("input", updateTax);
 }
 
 function handlePosAction(button) {
