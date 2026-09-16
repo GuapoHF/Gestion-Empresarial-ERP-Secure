@@ -52,14 +52,25 @@ let posTaxRate = Number(moduleSessionUser.taxRate ?? 15);
 function rowsStorageKey(moduleKey, viewKey) { return `textiles-gh-${moduleKey}-${viewKey}-rows`; }
 
 function normalizeDatasetRows(moduleKey, viewKey, datasetRows) {
-  if (moduleKey !== "ventas" || viewKey !== "cotizaciones") return datasetRows;
-  return datasetRows.map((row) => {
+  if (moduleKey === "ventas" && viewKey === "cotizaciones") return datasetRows.map((row) => {
     if (row.length !== 6) return row;
     const normalized = [...row];
     normalized[0] = normalized[0].replace(/^COT-/, "PRO-");
     normalized.splice(5, 0, "Exento");
     return normalized;
   });
+  if (moduleKey === "ventas" && viewKey === "pedidos") return datasetRows.map((row) => {
+    if (row.length !== 7) return row;
+    const detail = String(row[2] || "");
+    const quantity = detail.match(/[+-]?\d+(?:[.,]\d+)?/)?.[0] || "1";
+    const product = detail.replace(/^[+-]?\d+(?:[.,]\d+)?\s*(?:m|metros?|rollos?|piezas?)?\s*/i, "") || detail;
+    return [row[0], row[1], product, quantity, "Detalle", row[3], row[4], row[5], row[6]];
+  });
+  if (moduleKey === "inventarios" && viewKey === "productos") return datasetRows.map((row) => {
+    if (row.length !== 8) return row;
+    return [row[0], row[1], "Vicmar", row[2], "Rollo", row[4], row[5], "L 0", "L 0", "L 0", "Sin configurar", row[6], row[7]];
+  });
+  return datasetRows;
 }
 
 function loadRows(moduleKey, viewKey, defaults = []) {
@@ -165,7 +176,7 @@ function metricDependencies(metricType) {
     "sales-clients": [["ventas", "clientes"], ["ventas", "cobranza"]],
     "sales-invoices": [["ventas", "clientes"], ["ventas", "pedidos"], ["ventas", "facturas"]],
     "sales-receivables": [["ventas", "cobranza"]],
-    "inventory-products": [["inventarios", "productos"], ["inventarios", "almacenes"], ["costos", "analisis"]],
+    "inventory-products": [["inventarios", "productos"], ["inventarios", "almacenes"]],
     "accounting-summary": [["contabilidad", "bancos"], ["contabilidad", "cierres"], ["ventas", "cobranza"], ["compras", "pagos"]],
     "cost-analysis": [["costos", "analisis"], ["costos", "margenes"], ["inventarios", "productos"]],
   };
@@ -184,17 +195,16 @@ function operationalMetrics(metricType) {
   if (metricType === "inventory-products") {
     const products = moduleRows("inventarios", "productos");
     const warehouses = moduleRows("inventarios", "almacenes").filter((row) => /activo/i.test(row[6]));
-    const costs = new Map(moduleRows("costos", "analisis").map((row) => [row[0], numericValue(row[2])]));
-    const active = products.filter((row) => /activo/i.test(row[6]));
-    const lowStock = products.filter((row) => /bajo minimo/i.test(row[6]));
-    const stock = totalAt(products.filter((row) => !/inactivo/i.test(row[6])), 5);
-    const inventoryValue = products.reduce((sum, row) => sum + numericValue(row[5]) * (costs.get(row[0]) || 0), 0);
-    const categories = new Set(active.map((row) => row[2]).filter(Boolean)).size;
+    const active = products.filter((row) => /activo/i.test(row[11]));
+    const lowStock = products.filter((row) => /bajo minimo|existencia negativa/i.test(row[11]));
+    const stock = totalAt(products.filter((row) => !/inactivo/i.test(row[11])), 6);
+    const negativeStock = products.filter((row) => numericValue(row[6]) < 0);
+    const categories = new Set(active.map((row) => row[3]).filter(Boolean)).size;
     return [
       ["Productos activos", String(active.length), `${categories} categorias activas`],
       ["Existencia total", `${stock.toLocaleString(moduleSessionUser.locale || "es-HN")} unidades`, `En ${warehouses.length} almacenes activos`],
       ["Bajo minimo", String(lowStock.length), "Requieren compra"],
-      ["Valor inventario", currency(inventoryValue), `${costs.size} productos con costo registrado`],
+      ["Existencia negativa", String(negativeStock.length), negativeStock.length ? "Requiere regularizacion" : "Inventario regularizado"],
     ];
   }
 
@@ -242,7 +252,7 @@ function salesMetrics(metricType) {
   const receivables = moduleRows("ventas", "cobranza");
   const activeClients = clients.filter((row) => /activo/i.test(row[6]));
   const openInvoices = invoices.filter((row) => !/pagada|anulada/i.test(row[5]));
-  const pendingOrders = orders.filter((row) => !/entregado|cancelado/i.test(row[5]));
+  const pendingOrders = orders.filter((row) => !/entregado|cancelado/i.test(row[7]));
   const openReceivables = receivables.filter((row) => !/pagado/i.test(row[6]));
   const dueSoon = openReceivables.filter((row) => /por vencer|parcial/i.test(row[6]));
   const overdue = openReceivables.filter((row) => /vencido/i.test(row[6]));
@@ -263,7 +273,7 @@ function salesMetrics(metricType) {
   if (metricType === "sales-invoices") return [
     ["Ventas registradas", currency(invoiceSales), `${invoices.length} facturas emitidas`],
     ["Facturas abiertas", String(openInvoices.length), `${currency(total(openInvoices, 4))} por cobrar`],
-    ["Pedidos por facturar", String(pendingOrders.length), `${currency(total(pendingOrders, 4))} en pedidos abiertos`],
+    ["Pedidos por facturar", String(pendingOrders.length), `${currency(total(pendingOrders, 6))} en pedidos abiertos`],
     ["Ticket promedio", currency(invoices.length ? invoiceSales / invoices.length : 0), `${activeClients.length} clientes activos`],
   ];
   if (metricType === "sales-receivables") return [
@@ -344,13 +354,22 @@ function renderActions(index) {
   return `<span class="row-actions" data-index="${index}">${actions.join("")}</span>`;
 }
 
-function renderTable() {
+function filteredRows() {
   const term = searchInput.value.trim().toLowerCase();
   const status = filterInput.value;
   const statusIndex = Number.isInteger(currentView.statusIndex) ? currentView.statusIndex : -1;
-  const visibleRows = rows.map((row, index) => ({ row, index })).filter(({ row }) =>
-    row.join(" ").toLowerCase().includes(term) && (!status || row[statusIndex] === status)
-  );
+  const category = document.querySelector("#inventory-category-filter")?.value || "";
+  const stock = document.querySelector("#inventory-stock-filter")?.value || "";
+  return rows.map((row, index) => ({ row, index })).filter(({ row }) => {
+    const quantity = currentKey === "inventarios" && currentViewKey === "productos" ? numericValue(row[6]) : 0;
+    const matchesStock = !stock || (stock === "negative" ? quantity < 0 : stock === "positive" ? quantity > 0 : quantity === 0);
+    return row.join(" ").toLowerCase().includes(term) && (!status || row[statusIndex] === status) && (!category || row[3] === category) && matchesStock;
+  });
+}
+
+function renderTable() {
+  const statusIndex = Number.isInteger(currentView.statusIndex) ? currentView.statusIndex : -1;
+  const visibleRows = filteredRows();
   const body = visibleRows.map(({ row, index }) => {
     const cells = row.map((cell, cellIndex) => `<span>${cellIndex === statusIndex ? `<b class="status ${statusClass(cell)}">${escapeHtml(localizeBusinessText(cell))}</b>` : escapeHtml(localizeBusinessText(cell))}</span>`).join("");
     return `<div class="module-table-row" data-row-index="${index}">${cells}${renderActions(index)}</div>`;
@@ -368,6 +387,13 @@ function renderFilterOptions() {
   if (statusIndex < 0) return;
   const statuses = [...new Set(rows.map((row) => row[statusIndex]).filter(Boolean))];
   filterInput.innerHTML = '<option value="">Todos</option>' + statuses.map((status) => `<option value="${escapeHtml(status)}">${escapeHtml(status)}</option>`).join("");
+  if (currentKey === "inventarios" && currentViewKey === "productos" && !document.querySelector("#inventory-category-filter")) {
+    const categories = [...new Set(rows.map((row) => row[3]).filter(Boolean))];
+    filterControl.insertAdjacentHTML("afterend", `<label class="module-filter"><span>Categoria</span><select id="inventory-category-filter"><option value="">Todas</option>${categories.map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`).join("")}</select></label><label class="module-filter"><span>Existencia</span><select id="inventory-stock-filter"><option value="">Todas</option><option value="positive">Positiva</option><option value="zero">En cero</option><option value="negative">Negativa</option></select></label><button class="secondary-action inventory-export" id="inventory-export" type="button">Exportar a Excel</button>`);
+    document.querySelector("#inventory-category-filter").addEventListener("change", renderTable);
+    document.querySelector("#inventory-stock-filter").addEventListener("change", renderTable);
+    document.querySelector("#inventory-export").addEventListener("click", exportInventory);
+  }
 }
 
 function refreshDataView() {
@@ -493,6 +519,7 @@ function handlePosAction(button) {
 
 function normalizeInputValue(value, type) {
   if (type === "number") return String(value).replace(/[^\d.]/g, "");
+  if (type === "quantity") return String(value).replace(/[^\d.-]/g, "");
   if (type !== "date" || /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
   const months = { ene: "01", feb: "02", mar: "03", abr: "04", may: "05", jun: "06", jul: "07", ago: "08", sept: "09", oct: "10", nov: "11", dic: "12" };
   const match = String(value).toLowerCase().match(/(\d{1,2})\s+([a-z]+)\s+(\d{4})/);
@@ -507,9 +534,10 @@ function buildForm(row = []) {
       return `<label class="field"><span>${escapeHtml(localizeBusinessText(label))}</span><select name="field-${index}" required>${option.map((item) => `<option value="${escapeHtml(item)}"${item === value ? " selected" : ""}>${escapeHtml(localizeBusinessText(item))}</option>`).join("")}</select></label>`;
     }
     const isAutomatic = currentView.autoNumber?.index === index || currentView.autoCorrelative?.index === index;
+    const inputType = type === "quantity" ? "number" : type;
     const isClient = currentKey === "ventas" && /^cliente$/i.test(label);
     const list = isClient ? ' list="sales-client-list" autocomplete="off"' : "";
-    return `<label class="field"><span>${escapeHtml(localizeBusinessText(label))}</span><input name="field-${index}" type="${escapeHtml(type)}" value="${escapeHtml(value)}" placeholder="${escapeHtml(localizeBusinessText(option))}"${list}${isAutomatic ? ' readonly aria-readonly="true"' : ""} required /></label>`;
+    return `<label class="field"><span>${escapeHtml(localizeBusinessText(label))}</span><input name="field-${index}" type="${escapeHtml(inputType)}" value="${escapeHtml(value)}"${type === "quantity" ? ' step="any"' : ""} placeholder="${escapeHtml(localizeBusinessText(option))}"${list}${isAutomatic ? ' readonly aria-readonly="true"' : ""} required /></label>`;
   }).join("");
   if (currentKey === "ventas" && currentView.fields.some(([label]) => /^cliente$/i.test(label))) {
     const clientNames = moduleRows("ventas", "clientes").map((client) => client[1]).filter(Boolean);
@@ -534,6 +562,7 @@ function closeForm() {
 }
 
 function formatFieldValue(value, type) {
+  if (type === "quantity") return String(value);
   if (type === "date") return new Intl.DateTimeFormat(moduleSessionUser.locale || "es-HN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(`${value}T12:00:00Z`)).replace(".", "");
   if (type === "number") return `${moduleSessionUser.currencySymbol || "L"} ${Number(value).toLocaleString(moduleSessionUser.locale || "es-HN", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
   return value;
@@ -620,14 +649,17 @@ async function runWorkflow(index) {
     window.location.href = "./inventario.html";
   } else if (type === "quote-to-order") {
     const { documentNumber } = await nextTargetDocument("ventas", "pedidos");
-    await appendTargetRow("ventas", "pedidos", [documentNumber, row[1], row[2], row[3], row[4], "Pendiente"]);
+    const detail = String(row[2] || "");
+    const quantity = detail.match(/[+-]?\d+(?:[.,]\d+)?/)?.[0] || "1";
+    const product = detail.replace(/^[+-]?\d+(?:[.,]\d+)?\s*(?:m|metros?|rollos?|piezas?)?\s*/i, "") || detail;
+    await appendTargetRow("ventas", "pedidos", [documentNumber, row[1], product, quantity, "Detalle", row[3], row[4], "Pendiente"]);
     navigate("ventas", "pedidos");
   } else if (type === "order-to-invoice") {
     const today = new Intl.DateTimeFormat(moduleSessionUser.locale || "es-HN", { day: "numeric", month: "short", year: "numeric" }).format(new Date()).replace(".", "");
     const { targetView, documentNumber } = await nextTargetDocument("ventas", "facturas");
     const sequence = documentNumber.match(/(\d+)$/)?.[1] || "1";
     const correlative = `${targetView.autoCorrelative.prefix}-${sequence.padStart(targetView.autoCorrelative.digits, "0")}`;
-    await appendTargetRow("ventas", "facturas", [documentNumber, row[1], correlative, today, row[4], "Borrador"]);
+    await appendTargetRow("ventas", "facturas", [documentNumber, row[1], correlative, today, row[6], "Borrador"]);
     navigate("ventas", "facturas");
   } else if (type === "invoice-to-payment") {
     await appendTargetRow("ventas", "cobranza", [row[0], row[1], row[3], row[4], row[4], "0-15 dias", "Por vencer"]);
@@ -635,6 +667,19 @@ async function runWorkflow(index) {
   } else if (type === "client-to-collections") {
     navigate("ventas", "cobranza");
   }
+}
+
+function exportInventory() {
+  const dataRows = filteredRows().map(({ row }) => row.slice(0, currentView.columns.length - 1));
+  const headers = currentView.columns.slice(0, -1);
+  const xmlCell = (value) => `<Cell><Data ss:Type="String">${escapeHtml(localizeBusinessText(value))}</Data></Cell>`;
+  const xml = `<?xml version="1.0"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="Inventario filtrado"><Table><Row>${headers.map(xmlCell).join("")}</Row>${dataRows.map((row) => `<Row>${row.map(xmlCell).join("")}</Row>`).join("")}</Table></Worksheet></Workbook>`;
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(new Blob([xml], { type: "application/vnd.ms-excel;charset=utf-8" }));
+  link.download = `inventario-filtrado-${new Date().toISOString().slice(0, 10)}.xls`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+  showToast(`${dataRows.length} registros filtrados exportados a Excel.`);
 }
 
 function exportReport(index = 0) {

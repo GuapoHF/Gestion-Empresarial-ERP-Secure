@@ -4161,3 +4161,17 @@ select[aria-invalid="true"] {
   font-size: 13px;
   line-height: 1.5;
 }
+
+.inventory-export {
+  align-self: flex-end;
+  color: var(--text);
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+@media (max-width: 680px) {
+  .inventory-export {
+    margin-left: 0;
+    width: 100%;
+  }
+}
