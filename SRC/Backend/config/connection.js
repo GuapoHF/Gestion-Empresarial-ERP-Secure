@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const { Pool } = require("pg");
+const { friendlyConnectionError, validateConnectionString } = require("./connection-errors");
 
 const envPath = path.resolve(__dirname, "..", ".env");
 if (fs.existsSync(envPath)) {
@@ -11,7 +12,7 @@ if (fs.existsSync(envPath)) {
   }
 }
 
-const connectionString = process.env.SUPABASE_DB_URL || process.env.DATABASE_URL;
+let connectionString = process.env.SUPABASE_DB_URL || process.env.DATABASE_URL;
 
 if (!connectionString) {
   throw new Error(
@@ -19,11 +20,18 @@ if (!connectionString) {
   );
 }
 
+connectionString = validateConnectionString(connectionString);
+
+const configuredTimeout = Number(process.env.DB_CONNECTION_TIMEOUT_MS || 15_000);
+const connectionTimeoutMillis = Number.isFinite(configuredTimeout) && configuredTimeout > 0
+  ? configuredTimeout
+  : 15_000;
+
 const pgPool = new Pool({
   connectionString,
   max: Number(process.env.DB_POOL_MAX || 10),
   idleTimeoutMillis: 30_000,
-  connectionTimeoutMillis: 10_000,
+  connectionTimeoutMillis,
   ssl: process.env.DB_SSL === "false" ? false : { rejectUnauthorized: false },
 });
 
@@ -44,12 +52,22 @@ async function run(client, sql, values = []) {
   return [isInsert ? metadata : result.rows, result.fields];
 }
 
+async function connect() {
+  try {
+    return await pgPool.connect();
+  } catch (error) {
+    throw friendlyConnectionError(error, connectionString);
+  }
+}
+
 const pool = {
   query(sql, values) {
-    return run(pgPool, sql, values);
+    return run(pgPool, sql, values).catch((error) => {
+      throw friendlyConnectionError(error, connectionString);
+    });
   },
   async getConnection() {
-    const client = await pgPool.connect();
+    const client = await connect();
     return {
       query: (sql, values) => run(client, sql, values),
       beginTransaction: () => client.query("BEGIN"),

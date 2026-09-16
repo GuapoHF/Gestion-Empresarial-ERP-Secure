@@ -57,6 +57,7 @@ Edita `SRC/Backend/.env`:
 SUPABASE_DB_URL=postgresql://postgres.PROJECT_REF:CONTRASENA_CODIFICADA@aws-0-REGION.pooler.supabase.com:6543/postgres
 DB_SSL=true
 DB_POOL_MAX=10
+DB_CONNECTION_TIMEOUT_MS=15000
 PORT=3000
 NODE_ENV=development
 ```
@@ -64,6 +65,7 @@ NODE_ENV=development
 - `SUPABASE_DB_URL` es la URI PostgreSQL del paso anterior. También se acepta `DATABASE_URL`.
 - `DB_SSL=true` es lo recomendado para Supabase.
 - `DB_POOL_MAX` limita las conexiones simultáneas del proceso.
+- `DB_CONNECTION_TIMEOUT_MS` controla cuánto espera el backend por PostgreSQL antes de mostrar un diagnóstico (15 segundos por defecto).
 - `.env` está ignorado por Git. **Nunca** pongas la URI, la contraseña de PostgreSQL ni una `service_role` en el frontend o en un commit.
 
 En producción configura estas variables en el panel del proveedor de hosting, en lugar de subir `.env`. Para crear el primer administrador define temporalmente:
@@ -104,7 +106,7 @@ Si falla:
 
 - `Falta SUPABASE_DB_URL`: confirma que el archivo se llama exactamente `SRC/Backend/.env`.
 - `password authentication failed`: revisa la contraseña, el usuario del pooler y la codificación URL.
-- `getaddrinfo` o timeout: prueba el pooler IPv4, revisa la región/host y que el proyecto no esté pausado.
+- `getaddrinfo` o timeout: en Supabase abre **Connect > Connection string**, selecciona **Transaction pooler** (puerto `6543`) y reemplaza toda la URI anterior. Esta conexión funciona en redes IPv4; revisa además que el proyecto no esté pausado y que el host y la región no sean marcadores del ejemplo.
 - `relation ... does not exist`: vuelve a ejecutar `schema.sql` en SQL Editor y confirma que usaste el proyecto correcto.
 - `too many connections`: usa el pooler y reduce `DB_POOL_MAX`.
 
