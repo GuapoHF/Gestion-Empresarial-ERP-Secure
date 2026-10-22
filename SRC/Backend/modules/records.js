@@ -1,5 +1,6 @@
 const pool = require("../config/connection");
 const { requireModuleAccess, resolveTenantCompanyId } = require("../config/permissions");
+const { logSecurityEvent } = require("../config/audit");
 const {
   assertAllowedFields,
   parsePagination,
@@ -135,6 +136,13 @@ async function saveDataset(user, body = {}) {
   } finally {
     connection.release();
   }
+  await logSecurityEvent({
+    companyId,
+    userId: user.id,
+    action: "DATASET_UPDATED",
+    severity: "INFO",
+    details: { moduleKey, viewKey, totalRows: rows.length, username: user.username },
+  });
   return { saved: true, companyId, rows };
 }
 

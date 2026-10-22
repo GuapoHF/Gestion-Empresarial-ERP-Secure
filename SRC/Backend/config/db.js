@@ -334,17 +334,17 @@ async function ensureAuthTables() {
 
   const [defaultCompany] = await pool.query("SELECT id, name FROM companies WHERE code = 'VICMAR_HN' LIMIT 1");
   await pool.query(
-    `UPDATE users u SET company_id = COALESCE(u.company_id, c.id, ?), company = COALESCE(c.name, u.company, ?)
-     FROM companies c WHERE c.name = u.company AND u.company_id IS NULL`,
+    `UPDATE users SET company_id = COALESCE(users.company_id, c.id, ?), company = COALESCE(c.name, users.company, ?)
+     FROM companies c WHERE c.name = users.company AND users.company_id IS NULL`,
     [defaultCompany[0].id, defaultCompany[0].name]
   );
   await pool.query(
-    `UPDATE registration_requests r SET company_id = COALESCE(r.company_id, c.id, ?), company = COALESCE(c.name, r.company, ?)
-     FROM companies c WHERE c.name = r.company AND r.company_id IS NULL`,
+    `UPDATE registration_requests SET company_id = COALESCE(registration_requests.company_id, c.id, ?), company = COALESCE(c.name, registration_requests.company, ?)
+     FROM companies c WHERE c.name = registration_requests.company AND registration_requests.company_id IS NULL`,
     [defaultCompany[0].id, defaultCompany[0].name]
   );
-  await pool.query("UPDATE users u SET company = c.name FROM companies c WHERE c.id = u.company_id");
-  await pool.query("UPDATE registration_requests r SET company = c.name FROM companies c WHERE c.id = r.company_id");
+  await pool.query("UPDATE users SET company = c.name FROM companies c WHERE c.id = users.company_id");
+  await pool.query("UPDATE registration_requests SET company = c.name FROM companies c WHERE c.id = registration_requests.company_id");
 
   const [globalAdmins] = await pool.query("SELECT id FROM users WHERE is_global_admin = 1 AND status = 'Activo' LIMIT 1");
   const env = getEnvConfig();

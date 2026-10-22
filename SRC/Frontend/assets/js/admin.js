@@ -16,12 +16,15 @@ function setApprovalStatus(message, isError = false) {
   approvalStatus.classList.toggle("approval-error", isError);
   approvalStatus.hidden = false;
   window.clearTimeout(setApprovalStatus.timeout);
-  setApprovalStatus.timeout = window.setTimeout(() => { approvalStatus.hidden = true; }, 3500);
+  setApprovalStatus.timeout = window.setTimeout(() => {
+    approvalStatus.hidden = true;
+  }, 3500);
 }
 
 function formatDate(value) {
   if (!value) return "-";
-  return new Intl.DateTimeFormat("es-HN", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value)).replace(".", "");
+  const user = window.gestionUserDb.getCurrentUser();
+  return new Intl.DateTimeFormat(user?.locale || "es-HN", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value)).replace(".", "");
 }
 
 function statusClass(status) {
@@ -33,13 +36,18 @@ function statusClass(status) {
 function createApprovalRow(registration) {
   const row = document.createElement("article");
   row.className = "approval-row approval-row-detailed";
-  const actions = registration.status === "Pendiente" ? `
+  const actions =
+    registration.status === "Pendiente"
+      ? `
     <div class="approval-actions">
       <button type="button" class="approve-button" data-action="approve" data-id="${registration.id}">Aprobar</button>
       <button type="button" class="reject-button" data-action="reject" data-id="${registration.id}">Rechazar</button>
-    </div>` : '<span class="approval-processed">Procesada</span>';
+    </div>`
+      : '<span class="approval-processed">Procesada</span>';
   row.innerHTML = `
-    <div class="approval-person"><strong>${escapeHtml(registration.firstName)} ${escapeHtml(registration.lastName)}</strong><span>${escapeHtml(registration.email)}</span><small>@${escapeHtml(registration.username)}</small></div>
+    <div class="approval-person"><strong>${escapeHtml(registration.firstName)} ${escapeHtml(registration.lastName)}</strong><span>${escapeHtml(
+      registration.email
+    )}</span><small>@${escapeHtml(registration.username)}</small></div>
     <span><strong>${escapeHtml(registration.company)}</strong><small>${escapeHtml(registration.companyCode)}</small></span>
     <span>${escapeHtml(registration.role)}</span>
     <span>${formatDate(registration.createdAt)}</span>
@@ -48,19 +56,43 @@ function createApprovalRow(registration) {
   return row;
 }
 
-async function loadCompanies() {
-  const companies = await window.gestionUserDb.listCompanies();
-  document.querySelector("#admin-company-count").textContent = companies.length;
-  companyFilter.innerHTML = '<option value="">Todas las empresas</option>' + companies.map((company) => `<option value="${company.id}">${escapeHtml(company.name)}</option>`).join("");
+async function loadAdminMetrics() {
+  const user = window.gestionUserDb.getCurrentUser();
+  const [companies, employees, auditLogs] = await Promise.all([
+    window.gestionUserDb.listCompanies().catch(() => []),
+    window.gestionUserDb.listEmployees({ status: "Activo" }).catch(() => []),
+    window.gestionUserDb.getAuditLogs({ limit: 200 }).catch(() => []),
+  ]);
+  const companyCountEl = document.querySelector("#admin-company-count");
+  const employeeCountEl = document.querySelector("#admin-employee-count");
+  const auditCountEl = document.querySelector("#admin-audit-count");
+
+  if (companyCountEl) companyCountEl.textContent = String(companies.length || 1);
+  if (employeeCountEl) employeeCountEl.textContent = String(employees.length);
+  if (auditCountEl) auditCountEl.textContent = String(auditLogs.length);
+
+  if (user?.isGlobalAdmin) {
+    companyFilter.innerHTML =
+      '<option value="">Todas las empresas</option>' +
+      companies.map((company) => `<option value="${company.id}">${escapeHtml(company.name)}</option>`).join("");
+  } else {
+    companyFilter.innerHTML = companies
+      .filter((c) => Number(c.id) === Number(user?.companyId))
+      .map((company) => `<option value="${company.id}" selected>${escapeHtml(company.name)}</option>`)
+      .join("");
+    companyFilter.disabled = true;
+  }
 }
 
 async function loadApprovals() {
   approvalList.innerHTML = '<div class="approval-empty">Cargando solicitudes...</div>';
   const registrations = await window.gestionUserDb.getRegistrations({ status: statusFilter.value, companyId: companyFilter.value });
   approvalList.innerHTML = "";
-  document.querySelector("#admin-pending-count").textContent = statusFilter.value === "Pendiente" ? registrations.length : "-";
+  if (statusFilter.value === "Pendiente") {
+    document.querySelector("#admin-pending-count").textContent = String(registrations.length);
+  }
   if (!registrations.length) {
-    approvalList.innerHTML = '<div class="approval-empty">No hay solicitudes que coincidan con los filtros.</div>';
+    approvalList.innerHTML = '<div class="approval-empty">No hay solicitudes que coincidan con los filtros seleccionados.</div>';
     return;
   }
   registrations.forEach((registration) => approvalList.appendChild(createApprovalRow(registration)));
@@ -78,11 +110,13 @@ approvalList.addEventListener("click", async (event) => {
   }
   try {
     button.disabled = true;
+    button.textContent = "Aprobando...";
     await window.gestionUserDb.approveRegistration(id);
     setApprovalStatus("Cuenta aprobada y asignada a su empresa correctamente.");
-    await loadApprovals();
+    await Promise.all([loadApprovals(), loadAdminMetrics()]);
   } catch (error) {
     button.disabled = false;
+    button.textContent = "Aprobar";
     setApprovalStatus(error.message, true);
   }
 });
@@ -90,13 +124,23 @@ approvalList.addEventListener("click", async (event) => {
 rejectionForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!rejectionForm.checkValidity()) return rejectionForm.reportValidity();
+  const submitBtn = rejectionForm.querySelector("button[type='submit']");
   try {
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Rechazando...";
+    }
     await window.gestionUserDb.rejectRegistration(rejectionId, rejectionReason.value);
     rejectionDialog.close();
-    setApprovalStatus("Solicitud rechazada y registrada en la trazabilidad.");
-    await loadApprovals();
+    setApprovalStatus("Solicitud rechazada y registrada en la bitacora de auditoria.");
+    await Promise.all([loadApprovals(), loadAdminMetrics()]);
   } catch (error) {
     setApprovalStatus(error.message, true);
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Confirmar rechazo";
+    }
   }
 });
 
@@ -105,4 +149,4 @@ document.querySelector("#rejection-cancel").addEventListener("click", () => reje
 companyFilter.addEventListener("change", () => loadApprovals().catch((error) => setApprovalStatus(error.message, true)));
 statusFilter.addEventListener("change", () => loadApprovals().catch((error) => setApprovalStatus(error.message, true)));
 
-Promise.all([loadCompanies(), loadApprovals()]).catch((error) => setApprovalStatus(error.message, true));
+Promise.all([loadAdminMetrics(), loadApprovals()]).catch((error) => setApprovalStatus(error.message, true));

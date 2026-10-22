@@ -22,6 +22,7 @@ const { createEmployee, deleteEmployee, ensureEmployeesTable, getEmployee, listE
 const { assertAllowedFields } = require("./config/validator");
 const { stripBotFields, verifyBotProtection } = require("./config/security");
 const { validateAndPrepareUpload } = require("./config/file-security");
+const { listAuditLogs } = require("./config/audit");
 
 const env = getEnvConfig();
 const PORT = env.PORT;
@@ -369,6 +370,11 @@ async function handleApi(request, response, requestUrl) {
     assertAllowedFields(body, ["id", "reason"], "rechazo de registro");
     await rejectRegistration(body.id, sessionUser, body.reason, clientIp);
     sendJson(response, 200, { message: "Solicitud rechazada correctamente." }, request);
+    return true;
+  }
+  if (route === "/api/admin/audit-logs" && request.method === "GET") {
+    const logs = await listAuditLogs(sessionUser, Object.fromEntries(requestUrl.searchParams));
+    sendJson(response, 200, { logs }, request);
     return true;
   }
 

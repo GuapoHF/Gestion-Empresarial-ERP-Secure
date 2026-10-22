@@ -30,6 +30,7 @@ const ALLOWED_MODULE_VIEWS = Object.freeze({
   costos: ["analisis", "hojas", "margenes"],
   reportes: ["reportes"],
   ayuda: ["ayuda"],
+  administrador: ["configuracion"],
 });
 
 function httpError(message, statusCode = 400) {

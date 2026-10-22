@@ -1,9 +1,10 @@
 const ROLE_MODULES = Object.freeze({
-  Administrador: ["compras", "ventas", "inventarios", "contabilidad", "costos", "reportes", "ayuda"],
-  Compras: ["compras", "ayuda"],
-  Ventas: ["ventas", "ayuda"],
-  Inventarios: ["inventarios", "ayuda"],
-  Contabilidad: ["contabilidad", "costos", "ayuda"],
+  Administrador: ["compras", "ventas", "inventarios", "contabilidad", "costos", "reportes", "pos", "ayuda", "administrador"],
+  Compras: ["compras", "inventarios", "ayuda"],
+  Ventas: ["ventas", "pos", "ayuda"],
+  Inventarios: ["inventarios", "compras", "ayuda"],
+  Contabilidad: ["contabilidad", "costos", "reportes", "ayuda"],
+  Finanzas: ["contabilidad", "costos", "reportes", "pos", "ayuda"],
   Empleado: ["ayuda"],
 });
 
@@ -13,8 +14,9 @@ function httpForbidden(message) {
   return error;
 }
 
-function canAccessModule(user, moduleKey) {
-  const allowedModules = ROLE_MODULES[user?.role] || [];
+function canAccessModule(userOrRole, moduleKey) {
+  const role = typeof userOrRole === "string" ? userOrRole : userOrRole?.role;
+  const allowedModules = ROLE_MODULES[role] || [];
   return allowedModules.includes(String(moduleKey || "").trim().toLowerCase());
 }
 

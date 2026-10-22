@@ -8,7 +8,7 @@ process.env.ALLOWED_ORIGINS = "https://erp.vicmar.hn,http://localhost:3000";
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { blindIndex, decryptField, encryptField } = require("../config/crypto-fields");
-const { hashPassword, verifyPassword } = require("../config/db");
+const { ensureAuthTables, hashPassword, verifyPassword } = require("../config/db");
 const {
   assertAllowedFields,
   escapeHtml,
@@ -16,7 +16,8 @@ const {
   sanitizeText,
   validateModuleAndView,
 } = require("../config/validator");
-const { resolveTenantCompanyId } = require("../config/permissions");
+const { canAccessModule, resolveTenantCompanyId } = require("../config/permissions");
+const { getDataset, saveDataset } = require("../modules/records");
 const {
   checkLoginLockout,
   recordFailedLoginAttempt,
@@ -24,6 +25,7 @@ const {
   verifyBotProtection,
 } = require("../config/security");
 const { validateAndPrepareUpload } = require("../config/file-security");
+const { listAuditLogs, logSecurityEvent } = require("../config/audit");
 const {
   buildSecurityHeaders,
   buildSessionCookie,
@@ -210,4 +212,53 @@ test("Punto 18 y 19: Cabeceras HTTP de seguridad completas, CORS estricto y forz
   assert.equal(handled, true);
   assert.equal(redirectedStatus, 301);
   assert.equal(redirectedLocation, "https://erp.vicmar.hn/dashboard.html");
+});
+
+test("Punto 20: Bitacora de auditoria consultable por empresa y bloqueo RBAC a no administradores", async () => {
+  await logSecurityEvent({
+    companyId: 1,
+    userId: 1,
+    action: "DATASET_UPDATED",
+    severity: "INFO",
+    ipAddress: "127.0.0.1",
+    details: { moduleKey: "inventarios", viewKey: "productos", totalRows: 4, username: "gabrielh" },
+  });
+
+  const adminActor = { id: 1, username: "gabrielh", role: "Administrador", companyId: 1, isGlobalAdmin: true };
+  const logs = await listAuditLogs(adminActor, { companyId: 1, limit: 10 });
+  assert.ok(Array.isArray(logs));
+  assert.ok(logs.length >= 1);
+  assert.equal(logs[0].action, "DATASET_UPDATED");
+
+  const nonAdminActor = { id: 5, username: "vendedor1", role: "Ventas", companyId: 1, isGlobalAdmin: false };
+  await assert.rejects(() => listAuditLogs(nonAdminActor, { companyId: 1 }), /Se requiere rol de Administrador/);
+});
+
+test("UI/UX & Refactor: RBAC alineado entre cliente/servidor y persistencia de catalogos y configuracion", async () => {
+  // Validacion de vista configuracion en modulo administrador
+  const validatedConfig = validateModuleAndView("administrador", "configuracion");
+  assert.equal(validatedConfig.moduleKey, "administrador");
+  assert.equal(validatedConfig.viewKey, "configuracion");
+
+  // Alineacion RBAC para Finanzas y Contabilidad sobre contabilidad, reportes y pos
+  assert.equal(canAccessModule("Finanzas", "contabilidad"), true);
+  assert.equal(canAccessModule("Finanzas", "reportes"), true);
+  assert.equal(canAccessModule("Finanzas", "pos"), true);
+  assert.equal(canAccessModule("Contabilidad", "reportes"), true);
+  assert.equal(canAccessModule("Ventas", "administrador"), false);
+
+  await ensureAuthTables();
+  const adminActor = { id: 1, username: "gabrielh", role: "Administrador", companyId: 1, isGlobalAdmin: true };
+  const savedCatalog = await saveDataset(adminActor, {
+    moduleKey: "inventarios",
+    viewKey: "categorias",
+    companyId: 1,
+    rows: [["Lino Belga", "100% Lino", "Activo", "", "Asignando..."]],
+  });
+  assert.equal(savedCatalog.rows.length, 1);
+  assert.match(savedCatalog.rows[0].at(-1), /^SER-INV-CAT-\d{6}$/);
+
+  const fetchedCatalog = await getDataset(adminActor, { module: "inventarios", view: "categorias", companyId: 1 });
+  assert.equal(fetchedCatalog.rows.length, 1);
+  assert.equal(fetchedCatalog.rows[0][0], "Lino Belga");
 });

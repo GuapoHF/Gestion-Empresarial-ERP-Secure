@@ -41,6 +41,9 @@ if (!connectionString || connectionString === "local") {
   if (fs.existsSync(schemaPath)) {
     let schemaSql = fs.readFileSync(schemaPath, "utf8");
     schemaSql = schemaSql
+      .replace(/CREATE\s+INDEX\s+IF\s+NOT\s+EXISTS/gi, "CREATE INDEX")
+      .replace(/BIGSERIAL/gi, "SERIAL")
+      .replace(/(?<!\bNOT\s)\bNULL\b(?=\s*[,)])/gi, "")
       .replace(/decimal\(\d+,\s*\d+\)/gi, "numeric")
       .replace(/DO\s+\$\$[\s\S]*?\$\$\s*;/gi, "")
       .replace(/ALTER\s+TABLE\s+[\w.]+\s+(ENABLE|FORCE)\s+ROW\s+LEVEL\s+SECURITY\s*;/gi, "")
@@ -100,6 +103,9 @@ async function run(client, sql, values = []) {
     };
     return [isInsert ? metadata : result.rows, result.fields];
   } catch (error) {
+    if (isLocalDb && /^\s*CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\b/i.test(statement) && String(error.message).includes("Not supported")) {
+      return [[], []];
+    }
     const durationMs = Number(process.hrtime.bigint() - startNs) / 1_000_000;
     if (durationMs >= env.SLOW_QUERY_THRESHOLD_MS) {
       console.warn(`[SLOW_QUERY_ERROR] ${durationMs.toFixed(1)}ms | ${sanitizeSqlForLog(statement)}`);
