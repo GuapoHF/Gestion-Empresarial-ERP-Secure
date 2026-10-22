@@ -1,5 +1,6 @@
 const pool = require("../config/connection");
-const { requireModuleAccess } = require("../config/permissions");
+const { requireModuleAccess, resolveTenantCompanyId } = require("../config/permissions");
+const { parsePagination } = require("../config/validator");
 
 const REPORT_TYPES = ["income-statement", "balance-sheet", "trial-balance", "payroll-catalog", "sales-profit", "purchase-invoice"];
 
@@ -140,7 +141,7 @@ function salesSeedRows() {
 }
 
 function resolveCompanyId(user, requestedCompanyId) {
-  return user.isGlobalAdmin && requestedCompanyId ? Number(requestedCompanyId) : Number(user.companyId);
+  return resolveTenantCompanyId(user, requestedCompanyId);
 }
 
 async function ensureAccountingTables() {
@@ -277,26 +278,38 @@ function number(value) { return Number(value || 0); }
 function closing(row) { return number(row.opening_balance) + number(row.debit) - number(row.credit); }
 function sum(rows, type) { return rows.filter((row) => row.account_type === type).reduce((total, row) => total + Math.abs(closing(row)), 0); }
 
-async function getAccountingReport(user, query) {
+async function getAccountingReport(user, query = {}) {
   requireModuleAccess(user, "contabilidad");
   const type = String(query.type || "income-statement");
   if (!REPORT_TYPES.includes(type)) throw new Error("El tipo de reporte contable no es valido.");
   const period = /^\d{4}-(0[1-9]|1[0-2])$/.test(query.period || "") ? query.period : "2026-01";
   const companyId = resolveCompanyId(user, query.companyId);
-  const [companies] = await pool.query("SELECT * FROM companies WHERE id = ? AND active = 1 LIMIT 1", [companyId]);
+  const { limit, offset } = parsePagination(query, 200, 500);
+  const [companies] = await pool.query(
+    `SELECT id, code, name, legal_name, rtn, country_code, country_name, locale,
+            currency_code, currency_symbol, tax_id_label, tax_id, tax_rate, city
+     FROM companies WHERE id = ? AND active = 1 LIMIT 1`,
+    [companyId]
+  );
   if (!companies.length) throw new Error("La empresa solicitada no existe.");
   const company = companies[0];
   await seedAccounting(company, period);
 
   if (type === "payroll-catalog") {
-    const [concepts] = await pool.query("SELECT * FROM payroll_concepts WHERE company_id = ? ORDER BY concept_key", [companyId]);
+    const [concepts] = await pool.query(
+      `SELECT id, company_id, concept_key, description, status, integrates_salary,
+              calculation_scope, benefit, movement_type, accumulated
+       FROM payroll_concepts WHERE company_id = ? ORDER BY concept_key LIMIT ? OFFSET ?`,
+      [companyId, limit, offset]
+    );
     return { type, period, company, concepts };
   }
 
   if (type === "sales-profit") {
     const [lines] = await pool.query(
-      "SELECT product_code, description, quantity, total_cost, total_price FROM sales_profit_lines WHERE company_id = ? AND period = ? ORDER BY product_code",
-      [companyId, period]
+      `SELECT product_code, description, quantity, total_cost, total_price
+       FROM sales_profit_lines WHERE company_id = ? AND period = ? ORDER BY product_code LIMIT ? OFFSET ?`,
+      [companyId, period, limit, offset]
     );
     const rows = lines.map((row) => {
       const cost = number(row.total_cost);
@@ -327,11 +340,16 @@ async function getAccountingReport(user, query) {
 
   if (type === "purchase-invoice") {
     const [invoices] = await pool.query(
-      "SELECT * FROM purchase_invoices WHERE company_id = ? ORDER BY issue_date DESC, id DESC LIMIT 1",
+      `SELECT id, company_id, invoice_number, supplier, issue_date, due_date, currency, status, net_weight, gross_weight
+       FROM purchase_invoices WHERE company_id = ? ORDER BY issue_date DESC, id DESC LIMIT 1`,
       [companyId]
     );
     const invoice = invoices[0];
-    const [lines] = await pool.query("SELECT * FROM purchase_invoice_lines WHERE invoice_id = ? ORDER BY id", [invoice.id]);
+    const [lines] = await pool.query(
+      `SELECT id, invoice_id, work_order, style_code, description, color, quantity, unit, unit_price, line_total
+       FROM purchase_invoice_lines WHERE invoice_id = ? ORDER BY id LIMIT ? OFFSET ?`,
+      [invoice.id, limit, offset]
+    );
     return {
       type, period, company,
       invoice: {
@@ -358,7 +376,11 @@ async function getAccountingReport(user, query) {
     };
   }
 
-  const [rows] = await pool.query("SELECT * FROM accounting_balances WHERE company_id = ? AND period = ? ORDER BY account_code", [companyId, period]);
+  const [rows] = await pool.query(
+    `SELECT id, company_id, period, account_code, account_name, account_type, opening_balance, debit, credit
+     FROM accounting_balances WHERE company_id = ? AND period = ? ORDER BY account_code LIMIT ? OFFSET ?`,
+    [companyId, period, limit, offset]
+  );
   if (type === "trial-balance") {
     return {
       type, period, company,

@@ -19,10 +19,11 @@ async function requestJson(path, options = {}) {
     response = await fetch(`${API_BASE_URL}${path}`, {
       method: options.method || "GET",
       headers,
+      credentials: "same-origin",
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
     });
   } catch (error) {
-    throw new Error("No se pudo conectar con el servidor. Verifica que XAMPP y el backend esten activos.");
+    throw new Error("No se pudo conectar con el servidor. Verifica que el backend este activo.");
   }
   const responseType = response.headers.get("content-type") || "";
   const data = responseType.includes("application/json") ? await response.json().catch(() => ({})) : {};
@@ -38,7 +39,7 @@ async function requestJson(path, options = {}) {
 
 function storeSession(user, token) {
   sessionStorage.setItem(GESTION_SESSION_KEY, JSON.stringify(user));
-  sessionStorage.setItem(GESTION_TOKEN_KEY, token);
+  if (token) sessionStorage.setItem(GESTION_TOKEN_KEY, token);
   sessionStorage.setItem("gestionUser", user.username);
 }
 
@@ -58,9 +59,17 @@ async function createUser(userData) {
   return data.registration;
 }
 
-async function loginUser(username, password) {
+async function loginUser(username, password, botMeta = {}) {
   try {
-    const data = await requestJson("/auth/login", { method: "POST", body: { username: normalizeLoginValue(username), password }, auth: false });
+    const data = await requestJson("/auth/login", {
+      method: "POST",
+      body: {
+        username: normalizeLoginValue(username),
+        password,
+        ...(botMeta || {}),
+      },
+      auth: false,
+    });
     storeSession(data.user, data.token);
     return data.user;
   } catch (error) {
@@ -75,7 +84,6 @@ function getCurrentUser() {
 }
 
 async function validateSession() {
-  if (!getAuthToken()) return null;
   try {
     const data = await requestJson("/auth/session");
     sessionStorage.setItem(GESTION_SESSION_KEY, JSON.stringify(data.user));
@@ -87,13 +95,20 @@ async function validateSession() {
 }
 
 async function logoutUser() {
-  try { if (getAuthToken()) await requestJson("/auth/logout", { method: "POST", body: {} }); }
-  catch (error) { /* The local session must still be cleared. */ }
+  try { await requestJson("/auth/logout", { method: "POST", body: {} }); }
+  catch (error) { /* La sesion local debe limpiarse siempre. */ }
   clearSession();
 }
 
-async function recoverPassword(email) {
-  return requestJson("/auth/recover", { method: "POST", body: { email: normalizeLoginValue(email) }, auth: false });
+async function recoverPassword(email, botMeta = {}) {
+  return requestJson("/auth/recover", {
+    method: "POST",
+    body: {
+      email: normalizeLoginValue(email),
+      ...(botMeta || {}),
+    },
+    auth: false,
+  });
 }
 
 async function resetPassword(token, password) {
@@ -110,6 +125,8 @@ async function getRegistrations(filters = {}) {
   const query = new URLSearchParams();
   if (filters.status) query.set("status", filters.status);
   if (filters.companyId) query.set("companyId", filters.companyId);
+  if (filters.limit) query.set("limit", filters.limit);
+  if (filters.offset) query.set("offset", filters.offset);
   const data = await requestJson(`/admin/registrations?${query}`);
   return data.registrations || [];
 }
@@ -127,6 +144,8 @@ async function listEmployees(filters = {}) {
   const query = new URLSearchParams();
   if (filters.companyId) query.set("companyId", filters.companyId);
   if (filters.status) query.set("status", filters.status);
+  if (filters.limit) query.set("limit", filters.limit);
+  if (filters.offset) query.set("offset", filters.offset);
   const data = await requestJson(`/employees?${query}`);
   return data.employees || [];
 }

@@ -1,24 +1,47 @@
 const pool = require("../config/connection");
 const { cleanText, validateEmailAddress } = require("../config/db");
+const { requireAdminRole, resolveTenantCompanyId } = require("../config/permissions");
+const { assertAllowedFields, httpError, parsePagination } = require("../config/validator");
+const { blindIndex, decryptField, encryptField } = require("../config/crypto-fields");
+const { logSecurityEvent } = require("../config/audit");
 
 const EMPLOYEE_ROLES = ["Empleado", "Ventas", "Compras", "Inventarios", "Contabilidad"];
 const GENDERS = ["Femenino", "Masculino", "No especificado"];
+const ALLOWED_EMPLOYEE_FIELDS = [
+  "companyId",
+  "firstName",
+  "lastName",
+  "secondLastName",
+  "email",
+  "birthDate",
+  "birthPlace",
+  "gender",
+  "identityNumber",
+  "taxNumber",
+  "socialSecurityNumber",
+  "position",
+  "branch",
+  "systemRole",
+];
 
-function httpError(message, statusCode = 400) {
-  const error = new Error(message);
-  error.statusCode = statusCode;
-  return error;
-}
-
-function assertEmployeeAdmin(user) {
-  if (!user || user.role !== "Administrador") throw httpError("No tienes permiso para gestionar empleados.", 403);
-}
+const EMPLOYEE_COLUMNS = `
+  e.id, e.company_id, e.first_name, e.last_name, e.second_last_name, e.email,
+  e.birth_date, e.birth_place, e.gender, e.identity_number, e.tax_number,
+  e.social_security_number, e.position, e.branch, e.system_role, e.status,
+  e.created_at, e.updated_at, c.name company_name
+`;
 
 function resolveCompanyId(user, requestedCompanyId) {
-  assertEmployeeAdmin(user);
-  const companyId = user.isGlobalAdmin && requestedCompanyId ? Number(requestedCompanyId) : Number(user.companyId);
-  if (!Number.isInteger(companyId) || companyId <= 0) throw new Error("La empresa seleccionada no es valida.");
-  return companyId;
+  requireAdminRole(user);
+  return resolveTenantCompanyId(user, requestedCompanyId);
+}
+
+function safeDecrypt(value) {
+  try {
+    return decryptField(value);
+  } catch {
+    return "";
+  }
 }
 
 function publicEmployee(row) {
@@ -33,9 +56,9 @@ function publicEmployee(row) {
     birthDate: row.birth_date,
     birthPlace: row.birth_place || "",
     gender: row.gender,
-    identityNumber: row.identity_number || "",
-    taxNumber: row.tax_number || "",
-    socialSecurityNumber: row.social_security_number || "",
+    identityNumber: safeDecrypt(row.identity_number),
+    taxNumber: safeDecrypt(row.tax_number),
+    socialSecurityNumber: safeDecrypt(row.social_security_number),
     position: row.position,
     branch: row.branch,
     systemRole: row.system_role,
@@ -50,6 +73,8 @@ function normalizeDocument(value) {
 }
 
 function validateEmployee(body, countryCode) {
+  assertAllowedFields(body, ALLOWED_EMPLOYEE_FIELDS, "expediente de empleado");
+
   const firstName = cleanText(body.firstName);
   const lastName = cleanText(body.lastName);
   const secondLastName = cleanText(body.secondLastName);
@@ -99,7 +124,21 @@ function validateEmployee(body, countryCode) {
     if (socialSecurityNumber && !/^[A-Z0-9-]{7,20}$/.test(socialSecurityNumber)) throw new Error("El numero del IHSS no tiene un formato valido.");
   }
 
-  return { firstName, lastName, secondLastName, email, birthDate, birthPlace, gender, identityNumber, taxNumber, socialSecurityNumber, position, branch, systemRole };
+  return {
+    firstName,
+    lastName,
+    secondLastName,
+    email,
+    birthDate,
+    birthPlace,
+    gender,
+    identityNumber,
+    taxNumber,
+    socialSecurityNumber,
+    position,
+    branch,
+    systemRole,
+  };
 }
 
 async function ensureEmployeesTable() {
@@ -114,9 +153,10 @@ async function ensureEmployeesTable() {
     birth_date DATE NULL,
     birth_place VARCHAR(120) NULL,
     gender VARCHAR(30) NOT NULL DEFAULT 'No especificado',
-    identity_number VARCHAR(40) NULL,
-    tax_number VARCHAR(40) NULL,
-    social_security_number VARCHAR(40) NULL,
+    identity_number VARCHAR(255) NULL,
+    tax_number VARCHAR(255) NULL,
+    social_security_number VARCHAR(255) NULL,
+    identity_blind_index VARCHAR(100) NULL,
     position VARCHAR(120) NOT NULL,
     branch VARCHAR(120) NOT NULL,
     system_role VARCHAR(40) NOT NULL DEFAULT 'Empleado',
@@ -129,6 +169,11 @@ async function ensureEmployeesTable() {
     CONSTRAINT uq_employee_email_company UNIQUE (company_id, email),
     CONSTRAINT uq_employee_seed_company UNIQUE (company_id, seed_key)
   )`);
+
+  await pool.query("ALTER TABLE employees ADD COLUMN IF NOT EXISTS identity_blind_index VARCHAR(100) NULL").catch(() => {});
+  await pool.query("ALTER TABLE employees ALTER COLUMN identity_number TYPE VARCHAR(255)").catch(() => {});
+  await pool.query("ALTER TABLE employees ALTER COLUMN tax_number TYPE VARCHAR(255)").catch(() => {});
+  await pool.query("ALTER TABLE employees ALTER COLUMN social_security_number TYPE VARCHAR(255)").catch(() => {});
 
   const [companies] = await pool.query("SELECT id, code, country_code FROM companies WHERE active = 1");
   const seeds = [
@@ -160,15 +205,21 @@ async function listEmployees(user, query = {}) {
   await ensureEmployeesTable();
   const companyId = resolveCompanyId(user, query.companyId);
   await getCompany(companyId);
+  const { limit, offset } = parsePagination(query, 100, 500);
   const values = [companyId];
   let statusCondition = "status <> 'Eliminado'";
   if (["Activo", "Inactivo"].includes(query.status)) {
     statusCondition = "status = ?";
     values.push(query.status);
   }
+  values.push(limit, offset);
   const [rows] = await pool.query(
-    `SELECT e.*, c.name company_name FROM employees e JOIN companies c ON c.id = e.company_id
-     WHERE e.company_id = ? AND e.${statusCondition} ORDER BY e.first_name, e.last_name`,
+    `SELECT ${EMPLOYEE_COLUMNS}
+     FROM employees e
+     JOIN companies c ON c.id = e.company_id
+     WHERE e.company_id = ? AND e.${statusCondition}
+     ORDER BY e.first_name, e.last_name
+     LIMIT ? OFFSET ?`,
     values
   );
   return rows.map(publicEmployee);
@@ -176,32 +227,72 @@ async function listEmployees(user, query = {}) {
 
 async function getEmployee(user, id) {
   await ensureEmployeesTable();
-  assertEmployeeAdmin(user);
+  requireAdminRole(user);
   const [rows] = await pool.query(
-    `SELECT e.*, c.name company_name FROM employees e JOIN companies c ON c.id = e.company_id
+    `SELECT ${EMPLOYEE_COLUMNS}
+     FROM employees e
+     JOIN companies c ON c.id = e.company_id
      WHERE e.id = ? AND e.status <> 'Eliminado' LIMIT 1`,
     [Number(id)]
   );
   if (!rows.length) throw httpError("El empleado no existe o fue eliminado.", 404);
-  if (!user.isGlobalAdmin && Number(rows[0].company_id) !== Number(user.companyId)) throw httpError("No puedes consultar empleados de otra empresa.", 403);
+  if (!user.isGlobalAdmin && Number(rows[0].company_id) !== Number(user.companyId)) {
+    await logSecurityEvent({
+      companyId: user.companyId,
+      userId: user.id,
+      action: "IDOR_ATTEMPT_BLOCKED",
+      severity: "HIGH",
+      details: { targetEmployeeId: Number(id), targetCompanyId: rows[0].company_id },
+    });
+    throw httpError("Acceso denegado (Anti-IDOR): no puedes consultar empleados de otra empresa.", 403);
+  }
   return publicEmployee(rows[0]);
 }
 
-async function createEmployee(user, body) {
+async function createEmployee(user, body, ipAddress = "local") {
   await ensureEmployeesTable();
-  const companyId = resolveCompanyId(user, body.companyId);
+  const companyId = resolveCompanyId(user, body?.companyId);
   const company = await getCompany(companyId);
   const valid = validateEmployee(body, company.country_code);
+
+  const encryptedIdentity = valid.identityNumber ? encryptField(valid.identityNumber) : null;
+  const encryptedTax = valid.taxNumber ? encryptField(valid.taxNumber) : null;
+  const encryptedSsn = valid.socialSecurityNumber ? encryptField(valid.socialSecurityNumber) : null;
+  const identityIndex = valid.identityNumber ? blindIndex(valid.identityNumber) : null;
+
   try {
     const [result] = await pool.query(
       `INSERT INTO employees
        (company_id, first_name, last_name, second_last_name, email, birth_date, birth_place, gender, identity_number,
-        tax_number, social_security_number, position, branch, system_role, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [companyId, valid.firstName, valid.lastName, valid.secondLastName || null, valid.email, valid.birthDate, valid.birthPlace || null,
-       valid.gender, valid.identityNumber || null, valid.taxNumber || null, valid.socialSecurityNumber || null, valid.position,
-       valid.branch, valid.systemRole, user.id]
+        tax_number, social_security_number, identity_blind_index, position, branch, system_role, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        companyId,
+        valid.firstName,
+        valid.lastName,
+        valid.secondLastName || null,
+        valid.email,
+        valid.birthDate,
+        valid.birthPlace || null,
+        valid.gender,
+        encryptedIdentity,
+        encryptedTax,
+        encryptedSsn,
+        identityIndex,
+        valid.position,
+        valid.branch,
+        valid.systemRole,
+        user.id,
+      ]
     );
+    await logSecurityEvent({
+      companyId,
+      userId: user.id,
+      action: "EMPLOYEE_CREATED",
+      severity: "INFO",
+      ipAddress,
+      details: { employeeId: result.insertId, email: valid.email },
+    });
     return getEmployee(user, result.insertId);
   } catch (error) {
     if (error.code === "23505") throw new Error("Ya existe un empleado con ese correo en la empresa.");
@@ -209,21 +300,50 @@ async function createEmployee(user, body) {
   }
 }
 
-async function updateEmployee(user, id, body) {
+async function updateEmployee(user, id, body, ipAddress = "local") {
   await ensureEmployeesTable();
   const current = await getEmployee(user, id);
   const company = await getCompany(current.companyId);
   const valid = validateEmployee(body, company.country_code);
+
+  const encryptedIdentity = valid.identityNumber ? encryptField(valid.identityNumber) : null;
+  const encryptedTax = valid.taxNumber ? encryptField(valid.taxNumber) : null;
+  const encryptedSsn = valid.socialSecurityNumber ? encryptField(valid.socialSecurityNumber) : null;
+  const identityIndex = valid.identityNumber ? blindIndex(valid.identityNumber) : null;
+
   try {
     await pool.query(
       `UPDATE employees SET first_name = ?, last_name = ?, second_last_name = ?, email = ?, birth_date = ?, birth_place = ?,
-       gender = ?, identity_number = ?, tax_number = ?, social_security_number = ?, position = ?, branch = ?, system_role = ?,
-       updated_at = CURRENT_TIMESTAMP
-       WHERE id = ? AND status <> 'Eliminado'`,
-      [valid.firstName, valid.lastName, valid.secondLastName || null, valid.email, valid.birthDate, valid.birthPlace || null,
-       valid.gender, valid.identityNumber || null, valid.taxNumber || null, valid.socialSecurityNumber || null, valid.position,
-       valid.branch, valid.systemRole, Number(id)]
+       gender = ?, identity_number = ?, tax_number = ?, social_security_number = ?, identity_blind_index = ?,
+       position = ?, branch = ?, system_role = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE id = ? AND company_id = ? AND status <> 'Eliminado'`,
+      [
+        valid.firstName,
+        valid.lastName,
+        valid.secondLastName || null,
+        valid.email,
+        valid.birthDate,
+        valid.birthPlace || null,
+        valid.gender,
+        encryptedIdentity,
+        encryptedTax,
+        encryptedSsn,
+        identityIndex,
+        valid.position,
+        valid.branch,
+        valid.systemRole,
+        Number(id),
+        current.companyId,
+      ]
     );
+    await logSecurityEvent({
+      companyId: current.companyId,
+      userId: user.id,
+      action: "EMPLOYEE_UPDATED",
+      severity: "INFO",
+      ipAddress,
+      details: { employeeId: Number(id), email: valid.email },
+    });
     return getEmployee(user, id);
   } catch (error) {
     if (error.code === "23505") throw new Error("Ya existe un empleado con ese correo en la empresa.");
@@ -231,17 +351,25 @@ async function updateEmployee(user, id, body) {
   }
 }
 
-async function deleteEmployee(user, id, confirmation) {
+async function deleteEmployee(user, id, confirmation, ipAddress = "local") {
   await ensureEmployeesTable();
   const employee = await getEmployee(user, id);
   if (String(confirmation || "").trim().toUpperCase() !== "ELIMINAR") throw new Error("Escribe ELIMINAR para confirmar.");
   const suffix = `${employee.id}-${Date.now()}`;
   const [result] = await pool.query(
     `UPDATE employees SET status = 'Eliminado', email = ?, deleted_by = ?, deleted_at = NOW()
-     WHERE id = ? AND status <> 'Eliminado'`,
-    [`eliminado+${suffix}@empleados.invalid`, user.id, employee.id]
+     WHERE id = ? AND company_id = ? AND status <> 'Eliminado'`,
+    [`eliminado+${suffix}@empleados.invalid`, user.id, employee.id, employee.companyId]
   );
   if (!result.affectedRows) throw httpError("El empleado ya fue eliminado.", 409);
+  await logSecurityEvent({
+    companyId: employee.companyId,
+    userId: user.id,
+    action: "EMPLOYEE_DELETED",
+    severity: "WARN",
+    ipAddress,
+    details: { employeeId: employee.id },
+  });
   return { deleted: true, id: employee.id };
 }
 
